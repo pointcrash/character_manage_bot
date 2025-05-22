@@ -135,9 +135,9 @@ async def process_character_select(message: types.Message, state: FSMContext):
     for skill, _ in character['advanced_stats']['skills']['values'].items():
         value = calculate_skill_value(character, skill)
         if skill in expertise:
-            character_info += f"{skill}: {value:+d} (Эксперт⭐)\n"
+            character_info += f"  {skill}: {value:+d} ✓✓\n"
         elif skill in proficiencies:
-            character_info += f"{skill}: {value:+d} ✓\n"
+            character_info += f"  {skill}: {value:+d} ✓\n"
         else:
             character_info += f"  {skill}: {value:+d}\n"
     
