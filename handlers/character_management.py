@@ -171,24 +171,11 @@ async def process_delete_answer(message: types.Message, state: FSMContext):
     
     await state.clear()
 
-# Обработчик команды /cancel
-async def cmd_cancel(message: types.Message, state: FSMContext):
-    current_state = await state.get_state()
-    if current_state is None:
-        return
-    
-    await message.answer(
-        MESSAGES["common"]["cancel"],
-        reply_markup=ReplyKeyboardRemove()
-    )
-    await state.clear()
-
 def register_character_management_handlers(dp):
     """Регистрация всех обработчиков управления персонажами"""
     dp.message.register(cmd_list_characters, Command("list_characters"))
     dp.message.register(cmd_view_character, Command("view_character"))
     dp.message.register(cmd_delete_character, Command("delete_character"))
-    dp.message.register(cmd_cancel, Command("cancel"))
     
     dp.message.register(process_character_select, CharacterManagement.waiting_for_character_select)
     dp.message.register(process_delete_confirmation, CharacterManagement.waiting_for_delete_confirmation)
