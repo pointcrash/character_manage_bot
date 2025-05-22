@@ -1,0 +1,195 @@
+from aiogram import types, F
+from aiogram.filters import Command
+from aiogram.fsm.context import FSMContext
+from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove
+
+from config import MESSAGES, CharacterManagement
+from storage.character_storage import CharacterStorage
+
+# Инициализация хранилища
+character_storage = CharacterStorage()
+
+def calculate_modifier(ability_score: int) -> int:
+    """Рассчитать модификатор характеристики"""
+    return (ability_score - 10) // 2
+
+# Обработчик команды /list_characters
+async def cmd_list_characters(message: types.Message):
+    characters = character_storage.get_user_characters(message.from_user.id)
+    
+    if not characters:
+        await message.answer(MESSAGES["character_management"]["no_characters"])
+        return
+    
+    characters_list = "\n".join(
+        f"👤 {char['name']} - {char['race']} {char['class_name']} {char['level']} уровня"
+        for char in characters
+    )
+    
+    await message.answer(
+        MESSAGES["character_management"]["list_characters"].format(
+            characters_list=characters_list
+        )
+    )
+
+# Обработчик команды /view_character
+async def cmd_view_character(message: types.Message, state: FSMContext):
+    characters = character_storage.get_user_characters(message.from_user.id)
+    
+    if not characters:
+        await message.answer(MESSAGES["character_management"]["no_characters"])
+        return
+    
+    # Создаем клавиатуру с персонажами
+    keyboard = ReplyKeyboardMarkup(
+        keyboard=[[KeyboardButton(text=char["name"])] for char in characters],
+        resize_keyboard=True,
+        one_time_keyboard=True
+    )
+    
+    await message.answer(
+        MESSAGES["character_management"]["select_character"],
+        reply_markup=keyboard
+    )
+    await state.set_state(CharacterManagement.waiting_for_character_select)
+
+# Обработчик выбора персонажа для просмотра
+async def process_character_select(message: types.Message, state: FSMContext):
+    character_name = message.text.strip()
+    character = character_storage.load_character(message.from_user.id, character_name)
+    
+    if not character:
+        await message.answer(
+            MESSAGES["common"]["invalid_input"],
+            reply_markup=ReplyKeyboardRemove()
+        )
+        await state.clear()
+        return
+    
+    # Рассчитываем модификаторы характеристик
+    abilities = character["abilities"]
+    modifiers = {
+        f"{ability}_mod": calculate_modifier(score)
+        for ability, score in abilities.items()
+    }
+    
+    # Формируем сообщение с информацией о персонаже
+    await message.answer(
+        MESSAGES["character_management"]["character_info"].format(
+            name=character["name"],
+            race=character["race"],
+            class_name=character["class_name"],
+            level=character["level"],
+            strength=abilities["strength"],
+            dexterity=abilities["dexterity"],
+            constitution=abilities["constitution"],
+            intelligence=abilities["intelligence"],
+            wisdom=abilities["wisdom"],
+            charisma=abilities["charisma"],
+            **modifiers
+        ),
+        reply_markup=ReplyKeyboardRemove()
+    )
+    await state.clear()
+
+# Обработчик команды /delete_character
+async def cmd_delete_character(message: types.Message, state: FSMContext):
+    characters = character_storage.get_user_characters(message.from_user.id)
+    
+    if not characters:
+        await message.answer(MESSAGES["character_management"]["no_characters"])
+        return
+    
+    # Создаем клавиатуру с персонажами
+    keyboard = ReplyKeyboardMarkup(
+        keyboard=[[KeyboardButton(text=char["name"])] for char in characters],
+        resize_keyboard=True,
+        one_time_keyboard=True
+    )
+    
+    await message.answer(
+        MESSAGES["character_management"]["select_character"],
+        reply_markup=keyboard
+    )
+    await state.set_state(CharacterManagement.waiting_for_delete_confirmation)
+
+# Обработчик подтверждения удаления
+async def process_delete_confirmation(message: types.Message, state: FSMContext):
+    character_name = message.text.strip()
+    character = character_storage.load_character(message.from_user.id, character_name)
+    
+    if not character:
+        await message.answer(
+            MESSAGES["common"]["invalid_input"],
+            reply_markup=ReplyKeyboardRemove()
+        )
+        await state.clear()
+        return
+    
+    # Создаем клавиатуру с подтверждением
+    keyboard = ReplyKeyboardMarkup(
+        keyboard=[
+            [KeyboardButton(text="да"), KeyboardButton(text="нет")]
+        ],
+        resize_keyboard=True,
+        one_time_keyboard=True
+    )
+    
+    await message.answer(
+        MESSAGES["character_management"]["delete_confirmation"].format(
+            name=character_name
+        ),
+        reply_markup=keyboard
+    )
+    await state.update_data(character_name=character_name)
+    await state.set_state(CharacterManagement.waiting_for_delete_answer)
+
+# Обработчик ответа на подтверждение удаления
+async def process_delete_answer(message: types.Message, state: FSMContext):
+    answer = message.text.strip().lower()
+    data = await state.get_data()
+    character_name = data["character_name"]
+    
+    if answer == "да":
+        if character_storage.delete_character(message.from_user.id, character_name):
+            await message.answer(
+                MESSAGES["character_management"]["delete_success"].format(
+                    name=character_name
+                ),
+                reply_markup=ReplyKeyboardRemove()
+            )
+        else:
+            await message.answer(
+                MESSAGES["common"]["error"],
+                reply_markup=ReplyKeyboardRemove()
+            )
+    else:
+        await message.answer(
+            MESSAGES["character_management"]["delete_cancelled"],
+            reply_markup=ReplyKeyboardRemove()
+        )
+    
+    await state.clear()
+
+# Обработчик команды /cancel
+async def cmd_cancel(message: types.Message, state: FSMContext):
+    current_state = await state.get_state()
+    if current_state is None:
+        return
+    
+    await message.answer(
+        MESSAGES["common"]["cancel"],
+        reply_markup=ReplyKeyboardRemove()
+    )
+    await state.clear()
+
+def register_character_management_handlers(dp):
+    """Регистрация всех обработчиков управления персонажами"""
+    dp.message.register(cmd_list_characters, Command("list_characters"))
+    dp.message.register(cmd_view_character, Command("view_character"))
+    dp.message.register(cmd_delete_character, Command("delete_character"))
+    dp.message.register(cmd_cancel, Command("cancel"))
+    
+    dp.message.register(process_character_select, CharacterManagement.waiting_for_character_select)
+    dp.message.register(process_delete_confirmation, CharacterManagement.waiting_for_delete_confirmation)
+    dp.message.register(process_delete_answer, CharacterManagement.waiting_for_delete_answer) 

@@ -6,6 +6,7 @@ from aiogram.fsm.storage.memory import MemoryStorage
 
 from config import BOT_TOKEN, MESSAGES
 from handlers.character_creation import register_character_creation_handlers
+from handlers.character_management import register_character_management_handlers
 
 # Настройка логирования
 logging.basicConfig(level=logging.INFO)
@@ -24,8 +25,9 @@ async def cmd_start(message: types.Message):
 async def cmd_help(message: types.Message):
     await message.answer(MESSAGES["help"])
 
-# Регистрация обработчиков создания персонажа
+# Регистрация обработчиков
 register_character_creation_handlers(dp)
+register_character_management_handlers(dp)
 
 # Функция запуска бота
 async def main():

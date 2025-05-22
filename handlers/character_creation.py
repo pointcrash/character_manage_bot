@@ -7,6 +7,10 @@ from config import (
     MESSAGES, CharacterCreation,
     RACES, CLASSES
 )
+from storage.character_storage import CharacterStorage
+
+# Инициализация хранилища
+character_storage = CharacterStorage()
 
 # Обработчик команды /create_character
 async def cmd_create_character(message: types.Message, state: FSMContext):
@@ -18,6 +22,12 @@ async def process_name(message: types.Message, state: FSMContext):
     name = message.text.strip()
     if not 2 <= len(name) <= 30:
         await message.answer(MESSAGES["character_creation"]["name_invalid"])
+        return
+    
+    # Проверяем, не существует ли уже персонаж с таким именем
+    existing_character = character_storage.load_character(message.from_user.id, name)
+    if existing_character:
+        await message.answer("У вас уже есть персонаж с таким именем. Пожалуйста, выберите другое имя.")
         return
     
     await state.update_data(name=name)
@@ -110,9 +120,12 @@ async def process_abilities(message: types.Message, state: FSMContext):
         "charisma": abilities[5]
     }
     
-    # TODO: Сохранить данные персонажа в базу данных
+    # Сохраняем персонажа
+    if character_storage.save_character(message.from_user.id, character_data):
+        await message.answer(MESSAGES["character_creation"]["success"])
+    else:
+        await message.answer("Произошла ошибка при сохранении персонажа. Пожалуйста, попробуйте позже.")
     
-    await message.answer(MESSAGES["character_creation"]["success"])
     await state.clear()
 
 def register_character_creation_handlers(dp):
