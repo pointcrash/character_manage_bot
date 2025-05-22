@@ -21,6 +21,10 @@ class CharacterManagement(StatesGroup):
     waiting_for_character_select = State()
     waiting_for_delete_confirmation = State()
     waiting_for_delete_answer = State()
+    waiting_for_proficiencies_character = State()
+    waiting_for_proficiencies_list = State()
+    waiting_for_expertise_character = State()
+    waiting_for_expertise_list = State()
 
 # Доступные расы и классы
 RACES = [

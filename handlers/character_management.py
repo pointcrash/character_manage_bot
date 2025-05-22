@@ -44,6 +44,13 @@ def calculate_skill_value(character: dict, skill: str) -> int:
     
     return value
 
+def get_all_skills(character: dict) -> list:
+    """Получить список всех доступных навыков персонажа"""
+    skills = []
+    for ability_data in character['abilities'].values():
+        skills.extend(ability_data['skills'])
+    return skills
+
 # Обработчик команды /list_characters
 async def cmd_list_characters(message: types.Message):
     characters = character_storage.get_user_characters(message.from_user.id)
@@ -128,9 +135,9 @@ async def process_character_select(message: types.Message, state: FSMContext):
     for skill, _ in character['advanced_stats']['skills']['values'].items():
         value = calculate_skill_value(character, skill)
         if skill in expertise:
-            character_info += f"⭐ {skill}: {value:+d} (Эксперт)\n"
+            character_info += f"{skill}: {value:+d} (Эксперт⭐)\n"
         elif skill in proficiencies:
-            character_info += f"✓ {skill}: {value:+d} (Мастерство)\n"
+            character_info += f"{skill}: {value:+d} ✓\n"
         else:
             character_info += f"  {skill}: {value:+d}\n"
     
@@ -293,12 +300,188 @@ async def process_delete_answer(message: types.Message, state: FSMContext):
     
     await state.clear()
 
+# Обработчик команды /set_proficiencies
+async def cmd_set_proficiencies(message: types.Message, state: FSMContext):
+    characters = character_storage.get_user_characters(message.from_user.id)
+    
+    if not characters:
+        await message.answer(MESSAGES["character_management"]["no_characters"])
+        return
+    
+    # Создаем клавиатуру с персонажами
+    keyboard = ReplyKeyboardMarkup(
+        keyboard=[[KeyboardButton(text=char["name"])] for char in characters],
+        resize_keyboard=True,
+        one_time_keyboard=True
+    )
+    
+    await message.answer(
+        "Выберите персонажа для установки мастерства навыков:",
+        reply_markup=keyboard
+    )
+    await state.set_state(CharacterManagement.waiting_for_proficiencies_character)
+
+# Обработчик выбора персонажа для установки мастерства
+async def process_proficiencies_character(message: types.Message, state: FSMContext):
+    character_name = message.text.strip()
+    character = character_storage.load_character(message.from_user.id, character_name)
+    
+    if not character:
+        await message.answer(
+            MESSAGES["common"]["invalid_input"],
+            reply_markup=ReplyKeyboardRemove()
+        )
+        await state.clear()
+        return
+    
+    # Сохраняем имя персонажа в состоянии
+    await state.update_data(character_name=character_name)
+    
+    # Получаем список всех доступных навыков
+    all_skills = get_all_skills(character)
+    
+    await message.answer(
+        f"Введите названия навыков через пробел для установки мастерства.\n"
+        f"Доступные навыки: {', '.join(all_skills)}",
+        reply_markup=ReplyKeyboardRemove()
+    )
+    await state.set_state(CharacterManagement.waiting_for_proficiencies_list)
+
+# Обработчик ввода списка навыков для мастерства
+async def process_proficiencies_list(message: types.Message, state: FSMContext):
+    data = await state.get_data()
+    character_name = data["character_name"]
+    character = character_storage.load_character(message.from_user.id, character_name)
+    
+    # Получаем список всех доступных навыков
+    all_skills = get_all_skills(character)
+    
+    # Разбиваем введенный текст на навыки
+    input_skills = [skill.strip() for skill in message.text.split()]
+    
+    # Проверяем валидность навыков
+    invalid_skills = [skill for skill in input_skills if skill not in all_skills]
+    if invalid_skills:
+        await message.answer(
+            f"Следующие навыки не найдены: {', '.join(invalid_skills)}\n"
+            f"Пожалуйста, используйте только доступные навыки: {', '.join(all_skills)}"
+        )
+        return
+    
+    # Обновляем список мастерства
+    character['advanced_stats']['skills']['proficiencies'] = input_skills
+    
+    # Пересчитываем значения навыков
+    skill_values = {}
+    for skill in all_skills:
+        skill_values[skill] = calculate_skill_value(character, skill)
+    character['advanced_stats']['skills']['values'] = skill_values
+    
+    # Сохраняем изменения
+    if character_storage.save_character(message.from_user.id, character):
+        await message.answer("Мастерство навыков успешно обновлено!")
+    else:
+        await message.answer("Произошла ошибка при сохранении изменений.")
+    
+    await state.clear()
+
+# Обработчик команды /set_expertise
+async def cmd_set_expertise(message: types.Message, state: FSMContext):
+    characters = character_storage.get_user_characters(message.from_user.id)
+    
+    if not characters:
+        await message.answer(MESSAGES["character_management"]["no_characters"])
+        return
+    
+    # Создаем клавиатуру с персонажами
+    keyboard = ReplyKeyboardMarkup(
+        keyboard=[[KeyboardButton(text=char["name"])] for char in characters],
+        resize_keyboard=True,
+        one_time_keyboard=True
+    )
+    
+    await message.answer(
+        "Выберите персонажа для установки экспертизы навыков:",
+        reply_markup=keyboard
+    )
+    await state.set_state(CharacterManagement.waiting_for_expertise_character)
+
+# Обработчик выбора персонажа для установки экспертизы
+async def process_expertise_character(message: types.Message, state: FSMContext):
+    character_name = message.text.strip()
+    character = character_storage.load_character(message.from_user.id, character_name)
+    
+    if not character:
+        await message.answer(
+            MESSAGES["common"]["invalid_input"],
+            reply_markup=ReplyKeyboardRemove()
+        )
+        await state.clear()
+        return
+    
+    # Сохраняем имя персонажа в состоянии
+    await state.update_data(character_name=character_name)
+    
+    # Получаем список всех доступных навыков
+    all_skills = get_all_skills(character)
+    
+    await message.answer(
+        f"Введите названия навыков через пробел для установки экспертизы.\n"
+        f"Доступные навыки: {', '.join(all_skills)}",
+        reply_markup=ReplyKeyboardRemove()
+    )
+    await state.set_state(CharacterManagement.waiting_for_expertise_list)
+
+# Обработчик ввода списка навыков для экспертизы
+async def process_expertise_list(message: types.Message, state: FSMContext):
+    data = await state.get_data()
+    character_name = data["character_name"]
+    character = character_storage.load_character(message.from_user.id, character_name)
+    
+    # Получаем список всех доступных навыков
+    all_skills = get_all_skills(character)
+    
+    # Разбиваем введенный текст на навыки
+    input_skills = [skill.strip() for skill in message.text.split()]
+    
+    # Проверяем валидность навыков
+    invalid_skills = [skill for skill in input_skills if skill not in all_skills]
+    if invalid_skills:
+        await message.answer(
+            f"Следующие навыки не найдены: {', '.join(invalid_skills)}\n"
+            f"Пожалуйста, используйте только доступные навыки: {', '.join(all_skills)}"
+        )
+        return
+    
+    # Обновляем список экспертизы
+    character['advanced_stats']['skills']['expertise'] = input_skills
+    
+    # Пересчитываем значения навыков
+    skill_values = {}
+    for skill in all_skills:
+        skill_values[skill] = calculate_skill_value(character, skill)
+    character['advanced_stats']['skills']['values'] = skill_values
+    
+    # Сохраняем изменения
+    if character_storage.save_character(message.from_user.id, character):
+        await message.answer("Экспертиза навыков успешно обновлена!")
+    else:
+        await message.answer("Произошла ошибка при сохранении изменений.")
+    
+    await state.clear()
+
 def register_character_management_handlers(dp):
     """Регистрация всех обработчиков управления персонажами"""
     dp.message.register(cmd_list_characters, Command("list_characters"))
     dp.message.register(cmd_view_character, Command("view_character"))
     dp.message.register(cmd_delete_character, Command("delete_character"))
+    dp.message.register(cmd_set_proficiencies, Command("set_proficiencies"))
+    dp.message.register(cmd_set_expertise, Command("set_expertise"))
     
     dp.message.register(process_character_select, CharacterManagement.waiting_for_character_select)
     dp.message.register(process_delete_confirmation, CharacterManagement.waiting_for_delete_confirmation)
-    dp.message.register(process_delete_answer, CharacterManagement.waiting_for_delete_answer) 
+    dp.message.register(process_delete_answer, CharacterManagement.waiting_for_delete_answer)
+    dp.message.register(process_proficiencies_character, CharacterManagement.waiting_for_proficiencies_character)
+    dp.message.register(process_proficiencies_list, CharacterManagement.waiting_for_proficiencies_list)
+    dp.message.register(process_expertise_character, CharacterManagement.waiting_for_expertise_character)
+    dp.message.register(process_expertise_list, CharacterManagement.waiting_for_expertise_list) 
