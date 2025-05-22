@@ -66,28 +66,31 @@ async def process_character_select(message: types.Message, state: FSMContext):
         await state.clear()
         return
     
-    # Рассчитываем модификаторы характеристик
-    abilities = character["abilities"]
-    modifiers = {
-        f"{ability}_mod": calculate_modifier(score)
-        for ability, score in abilities.items()
-    }
-    
     # Формируем сообщение с информацией о персонаже
+    character_info = (
+        f"👤 {character['name']}\n"
+        f"Раса: {character['race']}\n"
+        f"Класс: {character['class_name']}\n"
+        f"Уровень: {character['level']}\n\n"
+        f"Характеристики:\n"
+    )
+    
+    # Добавляем информацию о характеристиках
+    for ability, data in character['abilities'].items():
+        character_info += (
+            f"{data['name']}: {data['value']} "
+            f"(модификатор: {data['modifier']:+d})\n"
+        )
+    
+    # Добавляем базовые параметры
+    character_info += f"\nБазовые параметры:\n"
+    character_info += f"Хиты: {character['base_stats']['hit_points']['current']}/{character['base_stats']['hit_points']['maximum']}\n"
+    character_info += f"Класс брони: {character['base_stats']['armor_class']['value']}\n"
+    character_info += f"Бонус мастерства: +{character['base_stats']['proficiency_bonus']['value']}\n"
+    character_info += f"Скорость: {character['base_stats']['speed']['current']} футов\n"
+    
     await message.answer(
-        MESSAGES["character_management"]["character_info"].format(
-            name=character["name"],
-            race=character["race"],
-            class_name=character["class_name"],
-            level=character["level"],
-            strength=abilities["strength"],
-            dexterity=abilities["dexterity"],
-            constitution=abilities["constitution"],
-            intelligence=abilities["intelligence"],
-            wisdom=abilities["wisdom"],
-            charisma=abilities["charisma"],
-            **modifiers
-        ),
+        character_info,
         reply_markup=ReplyKeyboardRemove()
     )
     await state.clear()

@@ -111,17 +111,207 @@ async def process_abilities(message: types.Message, state: FSMContext):
     
     # Получаем все данные персонажа
     character_data = await state.get_data()
-    character_data["abilities"] = {
-        "strength": abilities[0],
-        "dexterity": abilities[1],
-        "constitution": abilities[2],
-        "intelligence": abilities[3],
-        "wisdom": abilities[4],
-        "charisma": abilities[5]
+    
+    # Создаем структуру персонажа в формате character_stats
+    character = {
+        "name": character_data["name"],
+        "race": character_data["race"],
+        "class_name": character_data["class_name"],
+        "level": character_data["level"],
+        "user_id": message.from_user.id,
+        "abilities": {
+            "strength": {
+                "name": "Сила",
+                "description": "Физическая сила и атлетические способности",
+                "skills": ["Атлетика"],
+                "value": abilities[0],
+                "modifier": (abilities[0] - 10) // 2,
+                "saving_throw_proficient": False
+            },
+            "dexterity": {
+                "name": "Ловкость",
+                "description": "Координация, рефлексы и равновесие",
+                "skills": ["Акробатика", "Ловкость рук", "Скрытность"],
+                "value": abilities[1],
+                "modifier": (abilities[1] - 10) // 2,
+                "saving_throw_proficient": False
+            },
+            "constitution": {
+                "name": "Телосложение",
+                "description": "Здоровье, выносливость и жизненная сила",
+                "skills": [],
+                "value": abilities[2],
+                "modifier": (abilities[2] - 10) // 2,
+                "saving_throw_proficient": False
+            },
+            "intelligence": {
+                "name": "Интеллект",
+                "description": "Умственные способности, память и логика",
+                "skills": ["Анализ", "История", "Магия", "Природа", "Религия"],
+                "value": abilities[3],
+                "modifier": (abilities[3] - 10) // 2,
+                "saving_throw_proficient": False
+            },
+            "wisdom": {
+                "name": "Мудрость",
+                "description": "Восприятие, интуиция и проницательность",
+                "skills": ["Восприятие", "Выживание", "Медицина", "Проницательность", "Уход за животными"],
+                "value": abilities[4],
+                "modifier": (abilities[4] - 10) // 2,
+                "saving_throw_proficient": False
+            },
+            "charisma": {
+                "name": "Харизма",
+                "description": "Сила личности, убеждение и лидерство",
+                "skills": ["Запугивание", "Обман", "Убеждение", "Выступление"],
+                "value": abilities[5],
+                "modifier": (abilities[5] - 10) // 2,
+                "saving_throw_proficient": False
+            }
+        },
+        "base_stats": {
+            "hit_points": {
+                "name": "Хиты",
+                "description": "Количество очков здоровья",
+                "maximum": 0,
+                "current": 0,
+                "temporary": 0
+            },
+            "armor_class": {
+                "name": "Класс брони",
+                "description": "Защита от атак",
+                "value": 10,
+                "base": 10,
+                "bonus": 0
+            },
+            "proficiency_bonus": {
+                "name": "Бонус мастерства",
+                "description": "Бонус к проверкам характеристик и атакам",
+                "value": 2
+            },
+            "speed": {
+                "name": "Скорость",
+                "description": "Базовая скорость передвижения",
+                "base": 30,
+                "current": 30,
+                "fly": 0,
+                "swim": 0,
+                "climb": 0,
+                "burrow": 0
+            }
+        },
+        "advanced_stats": {
+            "saving_throws": {
+                "name": "Спасброски",
+                "description": "Базовые спасброски по характеристикам",
+                "values": {
+                    "strength": 0,
+                    "dexterity": 0,
+                    "constitution": 0,
+                    "intelligence": 0,
+                    "wisdom": 0,
+                    "charisma": 0
+                }
+            },
+            "skills": {
+                "name": "Навыки",
+                "description": "Все доступные навыки персонажа",
+                "proficiencies": [],
+                "expertise": [],
+                "values": {
+                    "Атлетика": 0,
+                    "Акробатика": 0,
+                    "Ловкость рук": 0,
+                    "Скрытность": 0,
+                    "Анализ": 0,
+                    "История": 0,
+                    "Магия": 0,
+                    "Природа": 0,
+                    "Религия": 0,
+                    "Восприятие": 0,
+                    "Выживание": 0,
+                    "Медицина": 0,
+                    "Проницательность": 0,
+                    "Уход за животными": 0,
+                    "Запугивание": 0,
+                    "Обман": 0,
+                    "Убеждение": 0,
+                    "Выступление": 0
+                }
+            },
+            "resistances": {
+                "name": "Сопротивления",
+                "description": "Сопротивление к различным типам урона",
+                "values": []
+            },
+            "immunities": {
+                "name": "Иммунитеты",
+                "description": "Иммунитеты к различным эффектам",
+                "values": []
+            }
+        },
+        "equipment": {
+            "weapons": {
+                "name": "Оружие",
+                "description": "Вооружение персонажа",
+                "items": []
+            },
+            "armor": {
+                "name": "Броня",
+                "description": "Защитное снаряжение",
+                "items": []
+            },
+            "items": {
+                "name": "Предметы",
+                "description": "Различные предметы в инвентаре",
+                "items": []
+            },
+            "money": {
+                "name": "Деньги",
+                "description": "Валюта и ценности",
+                "copper": 0,
+                "silver": 0,
+                "gold": 0,
+                "platinum": 0
+            }
+        },
+        "magic": {
+            "spell_slots": {
+                "name": "Ячейки заклинаний",
+                "description": "Доступные ячейки для заклинаний",
+                "values": {
+                    "1": 0,
+                    "2": 0,
+                    "3": 0,
+                    "4": 0,
+                    "5": 0,
+                    "6": 0,
+                    "7": 0,
+                    "8": 0,
+                    "9": 0
+                }
+            },
+            "spells_known": {
+                "name": "Известные заклинания",
+                "description": "Список известных заклинаний",
+                "cantrips": [],
+                "spells": []
+            },
+            "spell_save_dc": {
+                "name": "Сложность спасброска",
+                "description": "Сложность спасброска от заклинаний",
+                "value": 0
+            },
+            "spell_attack_bonus": {
+                "name": "Бонус к атаке заклинаниями",
+                "description": "Бонус к броскам атаки заклинаниями",
+                "value": 0
+            }
+        }
     }
     
     # Сохраняем персонажа
-    if character_storage.save_character(message.from_user.id, character_data):
+    if character_storage.save_character(message.from_user.id, character):
         await message.answer(MESSAGES["character_creation"]["success"])
     else:
         await message.answer("Произошла ошибка при сохранении персонажа. Пожалуйста, попробуйте позже.")
