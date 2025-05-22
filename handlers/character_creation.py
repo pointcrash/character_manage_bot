@@ -12,6 +12,35 @@ from storage.character_storage import CharacterStorage
 # Инициализация хранилища
 character_storage = CharacterStorage()
 
+def calculate_modifier(ability_score: int) -> int:
+    """Рассчитать модификатор характеристики"""
+    return (ability_score - 10) // 2
+
+def calculate_skill_values(abilities: dict, proficiency_bonus: int, proficiencies: list, expertise: list) -> dict:
+    """Рассчитать значения всех навыков"""
+    skill_values = {}
+    
+    # Проходим по всем характеристикам и их навыкам
+    for ability, data in abilities.items():
+        ability_modifier = data['modifier']
+        
+        # Для каждого навыка этой характеристики
+        for skill in data['skills']:
+            # Базовое значение - модификатор характеристики
+            value = ability_modifier
+            
+            # Добавляем бонус мастерства если навык в списке мастерства
+            if skill in proficiencies:
+                value += proficiency_bonus
+            
+            # Удваиваем бонус мастерства если навык в списке экспертизы
+            if skill in expertise:
+                value += proficiency_bonus
+            
+            skill_values[skill] = value
+    
+    return skill_values
+
 # Обработчик команды /create_character
 async def cmd_create_character(message: types.Message, state: FSMContext):
     await message.answer(MESSAGES["character_creation"]["start"])
@@ -218,26 +247,7 @@ async def process_abilities(message: types.Message, state: FSMContext):
                 "description": "Все доступные навыки персонажа",
                 "proficiencies": [],
                 "expertise": [],
-                "values": {
-                    "Атлетика": 0,
-                    "Акробатика": 0,
-                    "Ловкость рук": 0,
-                    "Скрытность": 0,
-                    "Анализ": 0,
-                    "История": 0,
-                    "Магия": 0,
-                    "Природа": 0,
-                    "Религия": 0,
-                    "Восприятие": 0,
-                    "Выживание": 0,
-                    "Медицина": 0,
-                    "Проницательность": 0,
-                    "Уход за животными": 0,
-                    "Запугивание": 0,
-                    "Обман": 0,
-                    "Убеждение": 0,
-                    "Выступление": 0
-                }
+                "values": {}
             },
             "resistances": {
                 "name": "Сопротивления",
@@ -309,6 +319,17 @@ async def process_abilities(message: types.Message, state: FSMContext):
             }
         }
     }
+    
+    # Рассчитываем значения навыков
+    skill_values = calculate_skill_values(
+        character['abilities'],
+        character['base_stats']['proficiency_bonus']['value'],
+        character['advanced_stats']['skills']['proficiencies'],
+        character['advanced_stats']['skills']['expertise']
+    )
+    
+    # Обновляем значения навыков в структуре персонажа
+    character['advanced_stats']['skills']['values'] = skill_values
     
     # Сохраняем персонажа
     if character_storage.save_character(message.from_user.id, character):

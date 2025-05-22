@@ -13,6 +13,37 @@ def calculate_modifier(ability_score: int) -> int:
     """Рассчитать модификатор характеристики"""
     return (ability_score - 10) // 2
 
+def calculate_skill_value(character: dict, skill: str) -> int:
+    """Рассчитать значение навыка с учетом модификатора характеристики и бонуса мастерства"""
+    # Находим характеристику, от которой зависит навык
+    ability = None
+    for abil, data in character['abilities'].items():
+        if skill in data['skills']:
+            ability = abil
+            break
+    
+    if ability is None:
+        return 0
+    
+    # Получаем модификатор характеристики
+    ability_modifier = character['abilities'][ability]['modifier']
+    
+    # Получаем бонус мастерства
+    proficiency_bonus = character['base_stats']['proficiency_bonus']['value']
+    
+    # Базовое значение - модификатор характеристики
+    value = ability_modifier
+    
+    # Добавляем бонус мастерства если навык в списке мастерства
+    if skill in character['advanced_stats']['skills']['proficiencies']:
+        value += proficiency_bonus
+    
+    # Удваиваем бонус мастерства если навык в списке экспертизы
+    if skill in character['advanced_stats']['skills']['expertise']:
+        value += proficiency_bonus
+    
+    return value
+
 # Обработчик команды /list_characters
 async def cmd_list_characters(message: types.Message):
     characters = character_storage.get_user_characters(message.from_user.id)
@@ -94,13 +125,14 @@ async def process_character_select(message: types.Message, state: FSMContext):
     proficiencies = character['advanced_stats']['skills']['proficiencies']
     expertise = character['advanced_stats']['skills']['expertise']
     
-    for skill, value in character['advanced_stats']['skills']['values'].items():
+    for skill, _ in character['advanced_stats']['skills']['values'].items():
+        value = calculate_skill_value(character, skill)
         if skill in expertise:
-            character_info += f"⭐ {skill}: +{value} (Эксперт)\n"
+            character_info += f"⭐ {skill}: {value:+d} (Эксперт)\n"
         elif skill in proficiencies:
-            character_info += f"✓ {skill}: +{value} (Мастерство)\n"
+            character_info += f"✓ {skill}: {value:+d} (Мастерство)\n"
         else:
-            character_info += f"  {skill}: +{value}\n"
+            character_info += f"  {skill}: {value:+d}\n"
     
     # Добавляем информацию о снаряжении
     character_info += f"\nСнаряжение:\n"
