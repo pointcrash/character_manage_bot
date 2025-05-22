@@ -89,6 +89,93 @@ async def process_character_select(message: types.Message, state: FSMContext):
     character_info += f"Бонус мастерства: +{character['base_stats']['proficiency_bonus']['value']}\n"
     character_info += f"Скорость: {character['base_stats']['speed']['current']} футов\n"
     
+    # Добавляем информацию о навыках
+    character_info += f"\nНавыки:\n"
+    proficiencies = character['advanced_stats']['skills']['proficiencies']
+    expertise = character['advanced_stats']['skills']['expertise']
+    
+    for skill, value in character['advanced_stats']['skills']['values'].items():
+        if skill in expertise:
+            character_info += f"⭐ {skill}: +{value} (Эксперт)\n"
+        elif skill in proficiencies:
+            character_info += f"✓ {skill}: +{value} (Мастерство)\n"
+        else:
+            character_info += f"  {skill}: +{value}\n"
+    
+    # Добавляем информацию о снаряжении
+    character_info += f"\nСнаряжение:\n"
+    
+    # Оружие
+    if character['equipment']['weapons']['items']:
+        character_info += f"Оружие:\n"
+        for weapon in character['equipment']['weapons']['items']:
+            character_info += f"  • {weapon}\n"
+    
+    # Броня
+    if character['equipment']['armor']['items']:
+        character_info += f"Броня:\n"
+        for armor in character['equipment']['armor']['items']:
+            character_info += f"  • {armor}\n"
+    
+    # Предметы
+    if character['equipment']['items']['items']:
+        character_info += f"Предметы:\n"
+        for item in character['equipment']['items']['items']:
+            character_info += f"  • {item}\n"
+    
+    # Деньги
+    money = character['equipment']['money']
+    if any([money['copper'], money['silver'], money['gold'], money['platinum']]):
+        character_info += f"Деньги:\n"
+        if money['platinum']: character_info += f"  • {money['platinum']} платиновых\n"
+        if money['gold']: character_info += f"  • {money['gold']} золотых\n"
+        if money['silver']: character_info += f"  • {money['silver']} серебряных\n"
+        if money['copper']: character_info += f"  • {money['copper']} медных\n"
+    
+    # Добавляем информацию о магических способностях
+    if any(character['magic']['spell_slots']['values'].values()):
+        character_info += f"\nМагические способности:\n"
+        
+        # Ячейки заклинаний
+        spell_slots = character['magic']['spell_slots']['values']
+        if any(spell_slots.values()):
+            character_info += f"Ячейки заклинаний:\n"
+            for level, slots in spell_slots.items():
+                if slots > 0:
+                    character_info += f"  • {level} уровень: {slots}\n"
+        
+        # Известные заклинания
+        if character['magic']['spells_known']['cantrips'] or character['magic']['spells_known']['spells']:
+            character_info += f"Известные заклинания:\n"
+            if character['magic']['spells_known']['cantrips']:
+                character_info += f"  Заговоры:\n"
+                for spell in character['magic']['spells_known']['cantrips']:
+                    character_info += f"    • {spell}\n"
+            if character['magic']['spells_known']['spells']:
+                character_info += f"  Заклинания:\n"
+                for spell in character['magic']['spells_known']['spells']:
+                    character_info += f"    • {spell}\n"
+        
+        # Параметры заклинаний
+        if character['magic']['spell_save_dc']['value'] or character['magic']['spell_attack_bonus']['value']:
+            character_info += f"Параметры заклинаний:\n"
+            if character['magic']['spell_save_dc']['value']:
+                character_info += f"  • Сложность спасброска: {character['magic']['spell_save_dc']['value']}\n"
+            if character['magic']['spell_attack_bonus']['value']:
+                character_info += f"  • Бонус к атаке: +{character['magic']['spell_attack_bonus']['value']}\n"
+    
+    # Добавляем информацию о сопротивлениях и иммунитетах
+    if character['advanced_stats']['resistances']['values'] or character['advanced_stats']['immunities']['values']:
+        character_info += f"\nОсобые способности:\n"
+        if character['advanced_stats']['resistances']['values']:
+            character_info += f"Сопротивления:\n"
+            for resistance in character['advanced_stats']['resistances']['values']:
+                character_info += f"  • {resistance}\n"
+        if character['advanced_stats']['immunities']['values']:
+            character_info += f"Иммунитеты:\n"
+            for immunity in character['advanced_stats']['immunities']['values']:
+                character_info += f"  • {immunity}\n"
+    
     await message.answer(
         character_info,
         reply_markup=ReplyKeyboardRemove()
