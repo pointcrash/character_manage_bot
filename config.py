@@ -27,6 +27,14 @@ class CharacterManagement(StatesGroup):
     waiting_for_expertise_list = State()
     waiting_for_saving_throws_character = State()
     waiting_for_saving_throws_list = State()
+    waiting_for_hit_points_character = State()
+    waiting_for_hit_points_value = State()
+    waiting_for_armor_class_character = State()
+    waiting_for_armor_class_value = State()
+    waiting_for_speed_character = State()
+    waiting_for_speed_value = State()
+    waiting_for_proficiency_bonus_character = State()
+    waiting_for_proficiency_bonus_value = State()
 
 # Доступные расы и классы
 RACES = [
@@ -54,7 +62,16 @@ MESSAGES = {
         "/create_character - Создать нового персонажа\n"
         "/list_characters - Показать список персонажей\n"
         "/view_character - Просмотреть информацию о персонаже\n"
-        "/delete_character - Удалить персонажа"
+        "/delete_character - Удалить персонажа\n\n"
+        "Управление навыками и спасбросками:\n"
+        "/set_proficiencies - Установить владение навыками\n"
+        "/set_expertise - Установить экспертизу навыков\n"
+        "/set_saving_throws - Установить владение спасбросками\n\n"
+        "Управление базовыми параметрами:\n"
+        "/set_hit_points - Установить количество очков здоровья\n"
+        "/set_armor_class - Установить класс брони\n"
+        "/set_speed - Установить скорость передвижения\n"
+        "/set_proficiency_bonus - Установить бонус мастерства"
     ),
     "character_creation": {
         "start": "Давайте создадим нового персонажа! Как его зовут?",

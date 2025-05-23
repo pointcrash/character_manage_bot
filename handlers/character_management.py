@@ -599,6 +599,338 @@ async def process_saving_throws_list(message: types.Message, state: FSMContext):
     
     await state.clear()
 
+# Обработчик команды /set_hit_points
+async def cmd_set_hit_points(message: types.Message, state: FSMContext):
+    characters = character_storage.get_user_characters(message.from_user.id)
+    
+    if not characters:
+        await message.answer(MESSAGES["character_management"]["no_characters"])
+        return
+    
+    # Создаем клавиатуру с персонажами
+    keyboard = ReplyKeyboardMarkup(
+        keyboard=[[KeyboardButton(text=char["name"])] for char in characters],
+        resize_keyboard=True,
+        one_time_keyboard=True
+    )
+    
+    await message.answer(
+        "Выберите персонажа для установки здоровья:",
+        reply_markup=keyboard
+    )
+    await state.set_state(CharacterManagement.waiting_for_hit_points_character)
+
+# Обработчик выбора персонажа для установки здоровья
+async def process_hit_points_character(message: types.Message, state: FSMContext):
+    character_name = message.text.strip()
+    character = character_storage.load_character(message.from_user.id, character_name)
+    
+    if not character:
+        await message.answer(
+            MESSAGES["common"]["invalid_input"],
+            reply_markup=ReplyKeyboardRemove()
+        )
+        await state.clear()
+        return
+    
+    # Сохраняем имя персонажа в состоянии
+    await state.update_data(character_name=character_name)
+    
+    await message.answer(
+        f"Введите значения здоровья через пробел в следующем порядке:\n"
+        f"максимальное текущее временное\n"
+        f"Например: '20 15 5'\n"
+        f"Если ввести только одно число, текущее и временное здоровье будут установлены автоматически\n\n"
+        f"Текущие значения:\n"
+        f"Максимальное: {character['base_stats']['hit_points']['maximum']}\n"
+        f"Текущее: {character['base_stats']['hit_points']['current']}\n"
+        f"Временное: {character['base_stats']['hit_points']['temporary']}",
+        reply_markup=ReplyKeyboardRemove()
+    )
+    await state.set_state(CharacterManagement.waiting_for_hit_points_value)
+
+# Обработчик ввода значения здоровья
+async def process_hit_points_value(message: types.Message, state: FSMContext):
+    try:
+        # Разбиваем ввод на максимальное, текущее и временное здоровье
+        values = message.text.strip().split()
+        if len(values) > 3:
+            await message.answer("Пожалуйста, введите максимум, текущее и временное здоровье через пробел (например: '20 15 5')")
+            return
+            
+        max_hp = int(values[0])
+        current_hp = int(values[1]) if len(values) > 1 else max_hp
+        temp_hp = int(values[2]) if len(values) > 2 else 0
+        
+        if max_hp < 0 or current_hp < 0 or temp_hp < 0:
+            raise ValueError
+            
+        # Проверяем, что текущее здоровье не превышает максимальное
+        if current_hp > max_hp:
+            await message.answer("Текущее здоровье не может быть больше максимального.")
+            return
+    except ValueError:
+        await message.answer("Пожалуйста, введите положительные числа.")
+        return
+    
+    data = await state.get_data()
+    character_name = data["character_name"]
+    character = character_storage.load_character(message.from_user.id, character_name)
+    
+    # Обновляем значения здоровья
+    character['base_stats']['hit_points']['maximum'] = max_hp
+    character['base_stats']['hit_points']['current'] = current_hp
+    character['base_stats']['hit_points']['temporary'] = temp_hp
+    
+    # Сохраняем изменения
+    if character_storage.save_character(message.from_user.id, character):
+        await message.answer(
+            f"Здоровье успешно обновлено:\n"
+            f"Максимальное: {max_hp}\n"
+            f"Текущее: {current_hp}\n"
+            f"Временное: {temp_hp}"
+        )
+    else:
+        await message.answer("Произошла ошибка при сохранении изменений.")
+    
+    await state.clear()
+
+# Обработчик команды /set_armor_class
+async def cmd_set_armor_class(message: types.Message, state: FSMContext):
+    characters = character_storage.get_user_characters(message.from_user.id)
+    
+    if not characters:
+        await message.answer(MESSAGES["character_management"]["no_characters"])
+        return
+    
+    # Создаем клавиатуру с персонажами
+    keyboard = ReplyKeyboardMarkup(
+        keyboard=[[KeyboardButton(text=char["name"])] for char in characters],
+        resize_keyboard=True,
+        one_time_keyboard=True
+    )
+    
+    await message.answer(
+        "Выберите персонажа для установки класса брони:",
+        reply_markup=keyboard
+    )
+    await state.set_state(CharacterManagement.waiting_for_armor_class_character)
+
+# Обработчик выбора персонажа для установки класса брони
+async def process_armor_class_character(message: types.Message, state: FSMContext):
+    character_name = message.text.strip()
+    character = character_storage.load_character(message.from_user.id, character_name)
+    
+    if not character:
+        await message.answer(
+            MESSAGES["common"]["invalid_input"],
+            reply_markup=ReplyKeyboardRemove()
+        )
+        await state.clear()
+        return
+    
+    # Сохраняем имя персонажа в состоянии
+    await state.update_data(character_name=character_name)
+    
+    await message.answer(
+        f"Введите значение класса брони (текущее значение: {character['base_stats']['armor_class']['value']}):",
+        reply_markup=ReplyKeyboardRemove()
+    )
+    await state.set_state(CharacterManagement.waiting_for_armor_class_value)
+
+# Обработчик ввода значения класса брони
+async def process_armor_class_value(message: types.Message, state: FSMContext):
+    try:
+        armor_class = int(message.text.strip())
+        if armor_class < 0:
+            raise ValueError
+    except ValueError:
+        await message.answer("Пожалуйста, введите положительное число.")
+        return
+    
+    data = await state.get_data()
+    character_name = data["character_name"]
+    character = character_storage.load_character(message.from_user.id, character_name)
+    
+    # Обновляем значение класса брони
+    character['base_stats']['armor_class']['value'] = armor_class
+    
+    # Сохраняем изменения
+    if character_storage.save_character(message.from_user.id, character):
+        await message.answer(f"Класс брони успешно обновлен: {armor_class}")
+    else:
+        await message.answer("Произошла ошибка при сохранении изменений.")
+    
+    await state.clear()
+
+# Обработчик команды /set_speed
+async def cmd_set_speed(message: types.Message, state: FSMContext):
+    characters = character_storage.get_user_characters(message.from_user.id)
+    
+    if not characters:
+        await message.answer(MESSAGES["character_management"]["no_characters"])
+        return
+    
+    # Создаем клавиатуру с персонажами
+    keyboard = ReplyKeyboardMarkup(
+        keyboard=[[KeyboardButton(text=char["name"])] for char in characters],
+        resize_keyboard=True,
+        one_time_keyboard=True
+    )
+    
+    await message.answer(
+        "Выберите персонажа для установки скорости:",
+        reply_markup=keyboard
+    )
+    await state.set_state(CharacterManagement.waiting_for_speed_character)
+
+# Обработчик выбора персонажа для установки скорости
+async def process_speed_character(message: types.Message, state: FSMContext):
+    character_name = message.text.strip()
+    character = character_storage.load_character(message.from_user.id, character_name)
+    
+    if not character:
+        await message.answer(
+            MESSAGES["common"]["invalid_input"],
+            reply_markup=ReplyKeyboardRemove()
+        )
+        await state.clear()
+        return
+    
+    # Сохраняем имя персонажа в состоянии
+    await state.update_data(character_name=character_name)
+    
+    await message.answer(
+        f"Введите значения скоростей через пробел в следующем порядке:\n"
+        f"обычная полет плавание лазание копание\n"
+        f"Например: '30 0 0 0 0'\n\n"
+        f"Текущие значения:\n"
+        f"Обычная: {character['base_stats']['speed']['current']}\n"
+        f"Полет: {character['base_stats']['speed']['fly']}\n"
+        f"Плавание: {character['base_stats']['speed']['swim']}\n"
+        f"Лазание: {character['base_stats']['speed']['climb']}\n"
+        f"Копание: {character['base_stats']['speed']['burrow']}",
+        reply_markup=ReplyKeyboardRemove()
+    )
+    await state.set_state(CharacterManagement.waiting_for_speed_value)
+
+# Обработчик ввода значения скорости
+async def process_speed_value(message: types.Message, state: FSMContext):
+    try:
+        # Разбиваем ввод на значения скоростей
+        values = message.text.strip().split()
+        if len(values) != 5:
+            await message.answer("Пожалуйста, введите 5 значений скоростей через пробел (обычная полет плавание лазание копание)")
+            return
+            
+        speeds = [int(value) for value in values]
+        if any(speed < 0 for speed in speeds):
+            raise ValueError
+    except ValueError:
+        await message.answer("Пожалуйста, введите положительные числа.")
+        return
+    
+    data = await state.get_data()
+    character_name = data["character_name"]
+    character = character_storage.load_character(message.from_user.id, character_name)
+    
+    # Обновляем значения скоростей
+    character['base_stats']['speed']['current'] = speeds[0]
+    character['base_stats']['speed']['fly'] = speeds[1]
+    character['base_stats']['speed']['swim'] = speeds[2]
+    character['base_stats']['speed']['climb'] = speeds[3]
+    character['base_stats']['speed']['burrow'] = speeds[4]
+    
+    # Сохраняем изменения
+    if character_storage.save_character(message.from_user.id, character):
+        await message.answer(
+            f"Скорости успешно обновлены:\n"
+            f"Обычная: {speeds[0]} футов\n"
+            f"Полет: {speeds[1]} футов\n"
+            f"Плавание: {speeds[2]} футов\n"
+            f"Лазание: {speeds[3]} футов\n"
+            f"Копание: {speeds[4]} футов"
+        )
+    else:
+        await message.answer("Произошла ошибка при сохранении изменений.")
+    
+    await state.clear()
+
+# Обработчик команды /set_proficiency_bonus
+async def cmd_set_proficiency_bonus(message: types.Message, state: FSMContext):
+    characters = character_storage.get_user_characters(message.from_user.id)
+    
+    if not characters:
+        await message.answer(MESSAGES["character_management"]["no_characters"])
+        return
+    
+    # Создаем клавиатуру с персонажами
+    keyboard = ReplyKeyboardMarkup(
+        keyboard=[[KeyboardButton(text=char["name"])] for char in characters],
+        resize_keyboard=True,
+        one_time_keyboard=True
+    )
+    
+    await message.answer(
+        "Выберите персонажа для установки бонуса мастерства:",
+        reply_markup=keyboard
+    )
+    await state.set_state(CharacterManagement.waiting_for_proficiency_bonus_character)
+
+# Обработчик выбора персонажа для установки бонуса мастерства
+async def process_proficiency_bonus_character(message: types.Message, state: FSMContext):
+    character_name = message.text.strip()
+    character = character_storage.load_character(message.from_user.id, character_name)
+    
+    if not character:
+        await message.answer(
+            MESSAGES["common"]["invalid_input"],
+            reply_markup=ReplyKeyboardRemove()
+        )
+        await state.clear()
+        return
+    
+    # Сохраняем имя персонажа в состоянии
+    await state.update_data(character_name=character_name)
+    
+    await message.answer(
+        f"Введите значение бонуса мастерства (текущее значение: +{character['base_stats']['proficiency_bonus']['value']}):",
+        reply_markup=ReplyKeyboardRemove()
+    )
+    await state.set_state(CharacterManagement.waiting_for_proficiency_bonus_value)
+
+# Обработчик ввода значения бонуса мастерства
+async def process_proficiency_bonus_value(message: types.Message, state: FSMContext):
+    try:
+        bonus = int(message.text.strip())
+        if bonus < 0:
+            raise ValueError
+    except ValueError:
+        await message.answer("Пожалуйста, введите положительное число.")
+        return
+    
+    data = await state.get_data()
+    character_name = data["character_name"]
+    character = character_storage.load_character(message.from_user.id, character_name)
+    
+    # Обновляем значение бонуса мастерства
+    character['base_stats']['proficiency_bonus']['value'] = bonus
+    
+    # Пересчитываем значения навыков и спасбросков
+    for ability in character['abilities']:
+        character['advanced_stats']['saving_throws']['values'][ability] = calculate_saving_throw_value(character, ability)
+    
+    for skill in character['advanced_stats']['skills']['values']:
+        character['advanced_stats']['skills']['values'][skill] = calculate_skill_value(character, skill)
+    
+    # Сохраняем изменения
+    if character_storage.save_character(message.from_user.id, character):
+        await message.answer(f"Бонус мастерства успешно обновлен: +{bonus}")
+    else:
+        await message.answer("Произошла ошибка при сохранении изменений.")
+    
+    await state.clear()
+
 def register_character_management_handlers(dp):
     """Регистрация всех обработчиков управления персонажами"""
     dp.message.register(cmd_list_characters, Command("list_characters"))
@@ -607,6 +939,10 @@ def register_character_management_handlers(dp):
     dp.message.register(cmd_set_proficiencies, Command("set_proficiencies"))
     dp.message.register(cmd_set_expertise, Command("set_expertise"))
     dp.message.register(cmd_set_saving_throws, Command("set_saving_throws"))
+    dp.message.register(cmd_set_hit_points, Command("set_hit_points"))
+    dp.message.register(cmd_set_armor_class, Command("set_armor_class"))
+    dp.message.register(cmd_set_speed, Command("set_speed"))
+    dp.message.register(cmd_set_proficiency_bonus, Command("set_proficiency_bonus"))
     
     dp.message.register(process_character_select, CharacterManagement.waiting_for_character_select)
     dp.message.register(process_delete_confirmation, CharacterManagement.waiting_for_delete_confirmation)
@@ -616,4 +952,12 @@ def register_character_management_handlers(dp):
     dp.message.register(process_expertise_character, CharacterManagement.waiting_for_expertise_character)
     dp.message.register(process_expertise_list, CharacterManagement.waiting_for_expertise_list)
     dp.message.register(process_saving_throws_character, CharacterManagement.waiting_for_saving_throws_character)
-    dp.message.register(process_saving_throws_list, CharacterManagement.waiting_for_saving_throws_list) 
+    dp.message.register(process_saving_throws_list, CharacterManagement.waiting_for_saving_throws_list)
+    dp.message.register(process_hit_points_character, CharacterManagement.waiting_for_hit_points_character)
+    dp.message.register(process_hit_points_value, CharacterManagement.waiting_for_hit_points_value)
+    dp.message.register(process_armor_class_character, CharacterManagement.waiting_for_armor_class_character)
+    dp.message.register(process_armor_class_value, CharacterManagement.waiting_for_armor_class_value)
+    dp.message.register(process_speed_character, CharacterManagement.waiting_for_speed_character)
+    dp.message.register(process_speed_value, CharacterManagement.waiting_for_speed_value)
+    dp.message.register(process_proficiency_bonus_character, CharacterManagement.waiting_for_proficiency_bonus_character)
+    dp.message.register(process_proficiency_bonus_value, CharacterManagement.waiting_for_proficiency_bonus_value) 
