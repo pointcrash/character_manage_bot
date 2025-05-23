@@ -9,6 +9,7 @@ from config import BOT_TOKEN, MESSAGES
 from handlers.character_creation import register_character_creation_handlers
 from handlers.character_management import register_character_management_handlers
 from handlers.spell_management import register_spell_management_handlers
+from handlers.money_management import register_money_management_handlers
 
 # Настройка логирования
 logging.basicConfig(level=logging.INFO)
@@ -22,6 +23,7 @@ dp = Dispatcher(storage=storage)
 register_character_creation_handlers(dp)
 register_character_management_handlers(dp)
 register_spell_management_handlers(dp)
+register_money_management_handlers(dp)
 
 # Обработчик команды /start
 @dp.message(Command("start"))

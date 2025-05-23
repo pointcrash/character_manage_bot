@@ -51,6 +51,9 @@ class CharacterManagement(StatesGroup):
     waiting_for_remove_spell_type = State()
     waiting_for_remove_spell_name = State()
     waiting_for_view_spells_character = State()
+    waiting_for_money_character = State()
+    waiting_for_money_operation = State()
+    waiting_for_money_amount = State()
 
 # Доступные расы и классы
 RACES = [
@@ -75,6 +78,7 @@ MESSAGES = {
 /create_character - Создать нового персонажа
 /list_characters - Показать список персонажей
 /view_character - Просмотреть информацию о персонаже
+/view_spells - Просмотреть магические способности персонажа
 /delete_character - Удалить персонажа
 /edit_character - Редактировать базовые параметры персонажа
 
@@ -88,9 +92,9 @@ MESSAGES = {
 /set_armor_class - Установить класс брони
 /set_speed - Установить скорость
 /set_proficiency_bonus - Установить бонус мастерства
+/set_money - Управление деньгами персонажа
 
 Управление заклинаниями:
-/view_spells - Просмотреть магические способности персонажа
 /set_spell_slots - Установить ячейки заклинаний
 /add_spell - Добавить заклинание или заговор
 /remove_spell - Удалить заклинание или заговор""",
