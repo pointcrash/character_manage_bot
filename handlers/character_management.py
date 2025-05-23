@@ -38,9 +38,9 @@ def calculate_skill_value(character: dict, skill: str) -> int:
     if skill in character['advanced_stats']['skills']['proficiencies']:
         value += proficiency_bonus
     
-    # Удваиваем бонус мастерства если навык в списке экспертизы
+    # Добавляем дополнительный бонус мастерства если навык в списке экспертизы
     if skill in character['advanced_stats']['skills']['expertise']:
-        value += proficiency_bonus
+        value += proficiency_bonus * 2
     
     return value
 
@@ -368,8 +368,15 @@ async def process_proficiencies_list(message: types.Message, state: FSMContext):
         )
         return
     
-    # Обновляем список мастерства
-    character['advanced_stats']['skills']['proficiencies'] = input_skills
+    # Удаляем навыки из списка если они там есть
+    character['advanced_stats']['skills']['proficiencies'] = list(
+        set(character['advanced_stats']['skills']['proficiencies']) ^ set(input_skills))
+    
+    # Удаляем навыки из списка экспертизы, если они там есть
+    character['advanced_stats']['skills']['expertise'] = [
+        skill for skill in character['advanced_stats']['skills']['expertise']
+        if skill not in input_skills
+    ]
     
     # Пересчитываем значения навыков
     skill_values = {}
@@ -453,8 +460,15 @@ async def process_expertise_list(message: types.Message, state: FSMContext):
         )
         return
     
-    # Обновляем список экспертизы
-    character['advanced_stats']['skills']['expertise'] = input_skills
+    # Удаляем навыки из списка если они там есть
+    character['advanced_stats']['skills']['expertise'] = list(
+        set(character['advanced_stats']['skills']['expertise']) ^ set(input_skills))
+    
+    # Удаляем навыки из списка мастерства, если они там есть
+    character['advanced_stats']['skills']['proficiencies'] = [
+        skill for skill in character['advanced_stats']['skills']['proficiencies']
+        if skill not in input_skills
+    ]
     
     # Пересчитываем значения навыков
     skill_values = {}
