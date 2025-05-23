@@ -12,6 +12,7 @@ from handlers.spell_management import register_spell_management_handlers
 from handlers.money_management import register_money_management_handlers
 from handlers.inventory_management import register_inventory_management_handlers
 from handlers.description_management import register_description_management_handlers
+from handlers.active_character import register_active_character_handlers
 
 # Настройка логирования
 logging.basicConfig(level=logging.INFO)
@@ -28,6 +29,7 @@ register_spell_management_handlers(dp)
 register_money_management_handlers(dp)
 register_inventory_management_handlers(dp)
 register_description_management_handlers(dp)
+register_active_character_handlers(dp)
 
 # Обработчик команды /start
 @dp.message(Command("start"))

@@ -67,6 +67,8 @@ class CharacterManagement(StatesGroup):
     waiting_for_view_description_character = State()
     # Состояния для управления снаряжением
     waiting_for_view_equipment_character = State()
+    # Состояния для управления активным персонажем
+    waiting_for_active_character = State()
 
 # Доступные расы и классы
 RACES = [
@@ -114,7 +116,11 @@ MESSAGES = {
 Управление заклинаниями:
 /set_spell_slots - Установить ячейки заклинаний
 /add_spell - Добавить заклинание или заговор
-/remove_spell - Удалить заклинание или заговор""",
+/remove_spell - Удалить заклинание или заговор
+
+Управление активным персонажем:
+/set_active - Выбрать активного персонажа
+/get_active - Показать текущего активного персонажа""",
 
     "character_creation": {
         "start": "Давайте создадим нового персонажа! Как его зовут?",
