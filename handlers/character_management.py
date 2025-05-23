@@ -3,7 +3,7 @@ from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove
 
-from config import MESSAGES, CharacterManagement
+from config import MESSAGES, CharacterManagement, RACES, CLASSES
 from storage.character_storage import CharacterStorage
 
 # Инициализация хранилища
@@ -931,6 +931,217 @@ async def process_proficiency_bonus_value(message: types.Message, state: FSMCont
     
     await state.clear()
 
+# Обработчик команды /edit_character
+async def cmd_edit_character(message: types.Message, state: FSMContext):
+    characters = character_storage.get_user_characters(message.from_user.id)
+    
+    if not characters:
+        await message.answer(MESSAGES["character_management"]["no_characters"])
+        return
+    
+    # Создаем клавиатуру с персонажами
+    keyboard = ReplyKeyboardMarkup(
+        keyboard=[[KeyboardButton(text=char["name"])] for char in characters],
+        resize_keyboard=True,
+        one_time_keyboard=True
+    )
+    
+    await message.answer(
+        "Выберите персонажа для редактирования:",
+        reply_markup=keyboard
+    )
+    await state.set_state(CharacterManagement.waiting_for_edit_character)
+
+# Обработчик выбора персонажа для редактирования
+async def process_edit_character(message: types.Message, state: FSMContext):
+    character_name = message.text.strip()
+    character = character_storage.load_character(message.from_user.id, character_name)
+    
+    if not character:
+        await message.answer(
+            MESSAGES["common"]["invalid_input"],
+            reply_markup=ReplyKeyboardRemove()
+        )
+        await state.clear()
+        return
+    
+    # Сохраняем имя персонажа в состоянии
+    await state.update_data(character_name=character_name)
+    
+    # Создаем клавиатуру с параметрами для редактирования
+    keyboard = ReplyKeyboardMarkup(
+        keyboard=[
+            [KeyboardButton(text="Имя"), KeyboardButton(text="Раса")],
+            [KeyboardButton(text="Класс"), KeyboardButton(text="Уровень")]
+        ],
+        resize_keyboard=True,
+        one_time_keyboard=True
+    )
+    
+    await message.answer(
+        f"Выберите параметр для редактирования:\n"
+        f"Текущие значения:\n"
+        f"Имя: {character['name']}\n"
+        f"Раса: {character['race']}\n"
+        f"Класс: {character['class_name']}\n"
+        f"Уровень: {character['level']}",
+        reply_markup=keyboard
+    )
+    await state.set_state(CharacterManagement.waiting_for_edit_name)
+
+# Обработчик выбора параметра для редактирования
+async def process_edit_parameter(message: types.Message, state: FSMContext):
+    parameter = message.text.strip()
+    data = await state.get_data()
+    character_name = data["character_name"]
+    character = character_storage.load_character(message.from_user.id, character_name)
+    
+    if parameter == "Имя":
+        await message.answer(
+            "Введите новое имя персонажа:",
+            reply_markup=ReplyKeyboardRemove()
+        )
+        await state.set_state(CharacterManagement.waiting_for_edit_name)
+    elif parameter == "Раса":
+        # Создаем клавиатуру с расами
+        keyboard = ReplyKeyboardMarkup(
+            keyboard=[[KeyboardButton(text=race)] for race in RACES],
+            resize_keyboard=True,
+            one_time_keyboard=True
+        )
+        await message.answer(
+            "Выберите новую расу персонажа:",
+            reply_markup=keyboard
+        )
+        await state.set_state(CharacterManagement.waiting_for_edit_race)
+    elif parameter == "Класс":
+        # Создаем клавиатуру с классами
+        keyboard = ReplyKeyboardMarkup(
+            keyboard=[[KeyboardButton(text=class_name)] for class_name in CLASSES],
+            resize_keyboard=True,
+            one_time_keyboard=True
+        )
+        await message.answer(
+            "Выберите новый класс персонажа:",
+            reply_markup=keyboard
+        )
+        await state.set_state(CharacterManagement.waiting_for_edit_class)
+    elif parameter == "Уровень":
+        await message.answer(
+            "Введите новый уровень персонажа (от 1 до 20):",
+            reply_markup=ReplyKeyboardRemove()
+        )
+        await state.set_state(CharacterManagement.waiting_for_edit_level)
+    else:
+        await message.answer(
+            MESSAGES["common"]["invalid_input"],
+            reply_markup=ReplyKeyboardRemove()
+        )
+        await state.clear()
+        return
+
+# Обработчик ввода нового имени
+async def process_edit_name(message: types.Message, state: FSMContext):
+    new_name = message.text.strip()
+    
+    if len(new_name) < 2 or len(new_name) > 30:
+        await message.answer(MESSAGES["character_creation"]["name_invalid"])
+        return
+    
+    data = await state.get_data()
+    character_name = data["character_name"]
+    character = character_storage.load_character(message.from_user.id, character_name)
+    
+    # Проверяем, не занято ли новое имя
+    if new_name != character_name and character_storage.load_character(message.from_user.id, new_name):
+        await message.answer("Персонаж с таким именем уже существует.")
+        return
+    
+    # Обновляем имя персонажа
+    character['name'] = new_name
+    
+    # Сохраняем изменения
+    if character_storage.save_character(message.from_user.id, character):
+        # Если имя изменилось, удаляем старый файл
+        if new_name != character_name:
+            character_storage.delete_character(message.from_user.id, character_name)
+        await message.answer(f"Имя персонажа успешно изменено на: {new_name}")
+    else:
+        await message.answer("Произошла ошибка при сохранении изменений.")
+    
+    await state.clear()
+
+# Обработчик выбора новой расы
+async def process_edit_race(message: types.Message, state: FSMContext):
+    new_race = message.text.strip()
+    
+    if new_race not in RACES:
+        await message.answer(MESSAGES["common"]["invalid_input"])
+        return
+    
+    data = await state.get_data()
+    character_name = data["character_name"]
+    character = character_storage.load_character(message.from_user.id, character_name)
+    
+    # Обновляем расу персонажа
+    character['race'] = new_race
+    
+    # Сохраняем изменения
+    if character_storage.save_character(message.from_user.id, character):
+        await message.answer(f"Раса персонажа успешно изменена на: {new_race}")
+    else:
+        await message.answer("Произошла ошибка при сохранении изменений.")
+    
+    await state.clear()
+
+# Обработчик выбора нового класса
+async def process_edit_class(message: types.Message, state: FSMContext):
+    new_class = message.text.strip()
+    
+    if new_class not in CLASSES:
+        await message.answer(MESSAGES["common"]["invalid_input"])
+        return
+    
+    data = await state.get_data()
+    character_name = data["character_name"]
+    character = character_storage.load_character(message.from_user.id, character_name)
+    
+    # Обновляем класс персонажа
+    character['class_name'] = new_class
+    
+    # Сохраняем изменения
+    if character_storage.save_character(message.from_user.id, character):
+        await message.answer(f"Класс персонажа успешно изменен на: {new_class}")
+    else:
+        await message.answer("Произошла ошибка при сохранении изменений.")
+    
+    await state.clear()
+
+# Обработчик ввода нового уровня
+async def process_edit_level(message: types.Message, state: FSMContext):
+    try:
+        new_level = int(message.text.strip())
+        if new_level < 1 or new_level > 20:
+            raise ValueError
+    except ValueError:
+        await message.answer(MESSAGES["character_creation"]["level_invalid"])
+        return
+    
+    data = await state.get_data()
+    character_name = data["character_name"]
+    character = character_storage.load_character(message.from_user.id, character_name)
+    
+    # Обновляем уровень персонажа
+    character['level'] = new_level
+    
+    # Сохраняем изменения
+    if character_storage.save_character(message.from_user.id, character):
+        await message.answer(f"Уровень персонажа успешно изменен на: {new_level}")
+    else:
+        await message.answer("Произошла ошибка при сохранении изменений.")
+    
+    await state.clear()
+
 def register_character_management_handlers(dp):
     """Регистрация всех обработчиков управления персонажами"""
     dp.message.register(cmd_list_characters, Command("list_characters"))
@@ -943,6 +1154,7 @@ def register_character_management_handlers(dp):
     dp.message.register(cmd_set_armor_class, Command("set_armor_class"))
     dp.message.register(cmd_set_speed, Command("set_speed"))
     dp.message.register(cmd_set_proficiency_bonus, Command("set_proficiency_bonus"))
+    dp.message.register(cmd_edit_character, Command("edit_character"))
     
     dp.message.register(process_character_select, CharacterManagement.waiting_for_character_select)
     dp.message.register(process_delete_confirmation, CharacterManagement.waiting_for_delete_confirmation)
@@ -960,4 +1172,10 @@ def register_character_management_handlers(dp):
     dp.message.register(process_speed_character, CharacterManagement.waiting_for_speed_character)
     dp.message.register(process_speed_value, CharacterManagement.waiting_for_speed_value)
     dp.message.register(process_proficiency_bonus_character, CharacterManagement.waiting_for_proficiency_bonus_character)
-    dp.message.register(process_proficiency_bonus_value, CharacterManagement.waiting_for_proficiency_bonus_value) 
+    dp.message.register(process_proficiency_bonus_value, CharacterManagement.waiting_for_proficiency_bonus_value)
+    dp.message.register(process_edit_character, CharacterManagement.waiting_for_edit_character)
+    dp.message.register(process_edit_parameter, CharacterManagement.waiting_for_edit_name, F.text.in_(["Имя", "Раса", "Класс", "Уровень"]))
+    dp.message.register(process_edit_name, CharacterManagement.waiting_for_edit_name)
+    dp.message.register(process_edit_race, CharacterManagement.waiting_for_edit_race)
+    dp.message.register(process_edit_class, CharacterManagement.waiting_for_edit_class)
+    dp.message.register(process_edit_level, CharacterManagement.waiting_for_edit_level) 

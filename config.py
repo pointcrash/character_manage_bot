@@ -35,6 +35,11 @@ class CharacterManagement(StatesGroup):
     waiting_for_speed_value = State()
     waiting_for_proficiency_bonus_character = State()
     waiting_for_proficiency_bonus_value = State()
+    waiting_for_edit_character = State()
+    waiting_for_edit_name = State()
+    waiting_for_edit_race = State()
+    waiting_for_edit_class = State()
+    waiting_for_edit_level = State()
 
 # Доступные расы и классы
 RACES = [
@@ -62,7 +67,8 @@ MESSAGES = {
         "/create_character - Создать нового персонажа\n"
         "/list_characters - Показать список персонажей\n"
         "/view_character - Просмотреть информацию о персонаже\n"
-        "/delete_character - Удалить персонажа\n\n"
+        "/delete_character - Удалить персонажа\n"
+        "/edit_character - Изменить базовые параметры персонажа\n\n"
         "Управление навыками и спасбросками:\n"
         "/set_proficiencies - Установить владение навыками\n"
         "/set_expertise - Установить экспертизу навыков\n"
