@@ -51,9 +51,16 @@ class CharacterManagement(StatesGroup):
     waiting_for_remove_spell_type = State()
     waiting_for_remove_spell_name = State()
     waiting_for_view_spells_character = State()
+    # Состояния для управления деньгами
     waiting_for_money_character = State()
     waiting_for_money_operation = State()
     waiting_for_money_amount = State()
+    # Состояния для управления инвентарем
+    waiting_for_inventory_character = State()
+    waiting_for_inventory_operation = State()
+    waiting_for_inventory_category = State()
+    waiting_for_inventory_item_name = State()
+    waiting_for_inventory_item_remove = State()
 
 # Доступные расы и классы
 RACES = [
@@ -93,6 +100,7 @@ MESSAGES = {
 /set_speed - Установить скорость
 /set_proficiency_bonus - Установить бонус мастерства
 /set_money - Управление деньгами персонажа
+/inventory - Управление инвентарем персонажа
 
 Управление заклинаниями:
 /set_spell_slots - Установить ячейки заклинаний
