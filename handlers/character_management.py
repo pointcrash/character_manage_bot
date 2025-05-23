@@ -51,6 +51,23 @@ def get_all_skills(character: dict) -> list:
         skills.extend(ability_data['skills'])
     return skills
 
+def calculate_saving_throw_value(character: dict, ability: str) -> int:
+    """Рассчитать значение спасброска с учетом модификатора характеристики и бонуса мастерства"""
+    # Получаем модификатор характеристики
+    ability_modifier = character['abilities'][ability]['modifier']
+    
+    # Получаем бонус мастерства
+    proficiency_bonus = character['base_stats']['proficiency_bonus']['value']
+    
+    # Базовое значение - модификатор характеристики
+    value = ability_modifier
+    
+    # Добавляем бонус мастерства если спасбросок в списке мастерства
+    if character['abilities'][ability]['saving_throw_proficient']:
+        value += proficiency_bonus
+    
+    return value
+
 # Обработчик команды /list_characters
 async def cmd_list_characters(message: types.Message):
     characters = character_storage.get_user_characters(message.from_user.id)
@@ -126,6 +143,15 @@ async def process_character_select(message: types.Message, state: FSMContext):
     character_info += f"Класс брони: {character['base_stats']['armor_class']['value']}\n"
     character_info += f"Бонус мастерства: +{character['base_stats']['proficiency_bonus']['value']}\n"
     character_info += f"Скорость: {character['base_stats']['speed']['current']} футов\n"
+    
+    # Добавляем информацию о спасбросках
+    character_info += f"\nСпасброски:\n"
+    for ability, data in character['abilities'].items():
+        value = character['advanced_stats']['saving_throws']['values'][ability]
+        if data['saving_throw_proficient']:
+            character_info += f"  {data['name']}: {value:+d} ✓\n"
+        else:
+            character_info += f"  {data['name']}: {value:+d}\n"
     
     # Добавляем информацию о навыках
     character_info += f"\nНавыки:\n"
@@ -484,6 +510,95 @@ async def process_expertise_list(message: types.Message, state: FSMContext):
     
     await state.clear()
 
+# Обработчик команды /set_saving_throws
+async def cmd_set_saving_throws(message: types.Message, state: FSMContext):
+    characters = character_storage.get_user_characters(message.from_user.id)
+    
+    if not characters:
+        await message.answer(MESSAGES["character_management"]["no_characters"])
+        return
+    
+    # Создаем клавиатуру с персонажами
+    keyboard = ReplyKeyboardMarkup(
+        keyboard=[[KeyboardButton(text=char["name"])] for char in characters],
+        resize_keyboard=True,
+        one_time_keyboard=True
+    )
+    
+    await message.answer(
+        "Выберите персонажа для установки владения спасбросками:",
+        reply_markup=keyboard
+    )
+    await state.set_state(CharacterManagement.waiting_for_saving_throws_character)
+
+# Обработчик выбора персонажа для установки спасбросков
+async def process_saving_throws_character(message: types.Message, state: FSMContext):
+    character_name = message.text.strip()
+    character = character_storage.load_character(message.from_user.id, character_name)
+    
+    if not character:
+        await message.answer(
+            MESSAGES["common"]["invalid_input"],
+            reply_markup=ReplyKeyboardRemove()
+        )
+        await state.clear()
+        return
+    
+    # Сохраняем имя персонажа в состоянии
+    await state.update_data(character_name=character_name)
+    
+    # Получаем список всех характеристик
+    abilities = [data['name'] for data in character['abilities'].values()]
+    
+    await message.answer(
+        f"Введите названия характеристик через пробел для установки владения спасбросками.\n"
+        f"Доступные характеристики: {', '.join(abilities)}",
+        reply_markup=ReplyKeyboardRemove()
+    )
+    await state.set_state(CharacterManagement.waiting_for_saving_throws_list)
+
+# Обработчик ввода списка характеристик для спасбросков
+async def process_saving_throws_list(message: types.Message, state: FSMContext):
+    data = await state.get_data()
+    character_name = data["character_name"]
+    character = character_storage.load_character(message.from_user.id, character_name)
+    
+    # Получаем список всех характеристик
+    abilities = {data['name']: ability for ability, data in character['abilities'].items()}
+    
+    # Разбиваем введенный текст на характеристики
+    input_abilities = [ability.strip() for ability in message.text.split()]
+    
+    # Проверяем валидность характеристик
+    invalid_abilities = [ability for ability in input_abilities if ability not in abilities]
+    if invalid_abilities:
+        await message.answer(
+            f"Следующие характеристики не найдены: {', '.join(invalid_abilities)}\n"
+            f"Пожалуйста, используйте только доступные характеристики: {', '.join(abilities.keys())}"
+        )
+        return
+    
+    # Сбрасываем все спасброски
+    for ability in character['abilities'].values():
+        ability['saving_throw_proficient'] = False
+    
+    # Устанавливаем владение для выбранных характеристик
+    for ability_name in input_abilities:
+        ability_key = abilities[ability_name]
+        character['abilities'][ability_key]['saving_throw_proficient'] = True
+    
+    # Обновляем значения всех спасбросков
+    for ability in character['abilities']:
+        character['advanced_stats']['saving_throws']['values'][ability] = calculate_saving_throw_value(character, ability)
+    
+    # Сохраняем изменения
+    if character_storage.save_character(message.from_user.id, character):
+        await message.answer("Владение спасбросками успешно обновлено!")
+    else:
+        await message.answer("Произошла ошибка при сохранении изменений.")
+    
+    await state.clear()
+
 def register_character_management_handlers(dp):
     """Регистрация всех обработчиков управления персонажами"""
     dp.message.register(cmd_list_characters, Command("list_characters"))
@@ -491,6 +606,7 @@ def register_character_management_handlers(dp):
     dp.message.register(cmd_delete_character, Command("delete_character"))
     dp.message.register(cmd_set_proficiencies, Command("set_proficiencies"))
     dp.message.register(cmd_set_expertise, Command("set_expertise"))
+    dp.message.register(cmd_set_saving_throws, Command("set_saving_throws"))
     
     dp.message.register(process_character_select, CharacterManagement.waiting_for_character_select)
     dp.message.register(process_delete_confirmation, CharacterManagement.waiting_for_delete_confirmation)
@@ -498,4 +614,6 @@ def register_character_management_handlers(dp):
     dp.message.register(process_proficiencies_character, CharacterManagement.waiting_for_proficiencies_character)
     dp.message.register(process_proficiencies_list, CharacterManagement.waiting_for_proficiencies_list)
     dp.message.register(process_expertise_character, CharacterManagement.waiting_for_expertise_character)
-    dp.message.register(process_expertise_list, CharacterManagement.waiting_for_expertise_list) 
+    dp.message.register(process_expertise_list, CharacterManagement.waiting_for_expertise_list)
+    dp.message.register(process_saving_throws_character, CharacterManagement.waiting_for_saving_throws_character)
+    dp.message.register(process_saving_throws_list, CharacterManagement.waiting_for_saving_throws_list) 

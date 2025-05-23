@@ -331,6 +331,10 @@ async def process_abilities(message: types.Message, state: FSMContext):
     # Обновляем значения навыков в структуре персонажа
     character['advanced_stats']['skills']['values'] = skill_values
     
+    # Рассчитываем значения спасбросков
+    for ability in character['abilities']:
+        character['advanced_stats']['saving_throws']['values'][ability] = calculate_saving_throw_value(character, ability)
+    
     # Сохраняем персонажа
     if character_storage.save_character(message.from_user.id, character):
         await message.answer(MESSAGES["character_creation"]["success"])
