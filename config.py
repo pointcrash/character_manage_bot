@@ -61,6 +61,10 @@ class CharacterManagement(StatesGroup):
     waiting_for_inventory_category = State()
     waiting_for_inventory_item_name = State()
     waiting_for_inventory_item_remove = State()
+    # Состояния для управления описанием
+    waiting_for_description_character = State()
+    waiting_for_description_text = State()
+    waiting_for_view_description_character = State()
 
 # Доступные расы и классы
 RACES = [
@@ -101,6 +105,8 @@ MESSAGES = {
 /set_proficiency_bonus - Установить бонус мастерства
 /set_money - Управление деньгами персонажа
 /inventory - Управление инвентарем персонажа
+/set_description - Установить описание персонажа
+/view_description - Просмотреть описание персонажа
 
 Управление заклинаниями:
 /set_spell_slots - Установить ячейки заклинаний
