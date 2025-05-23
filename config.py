@@ -40,6 +40,16 @@ class CharacterManagement(StatesGroup):
     waiting_for_edit_race = State()
     waiting_for_edit_class = State()
     waiting_for_edit_level = State()
+    # Состояния для управления заклинаниями
+    waiting_for_spell_slots_character = State()
+    waiting_for_spell_slots_values = State()
+    waiting_for_add_spell_character = State()
+    waiting_for_spell_type = State()
+    waiting_for_spell_level = State()
+    waiting_for_spell_name = State()
+    waiting_for_remove_spell_character = State()
+    waiting_for_remove_spell_type = State()
+    waiting_for_remove_spell_name = State()
 
 # Доступные расы и классы
 RACES = [
@@ -55,30 +65,33 @@ CLASSES = [
 
 # Сообщения бота
 MESSAGES = {
-    "start": (
-        "Привет! Я бот для управления персонажами D&D 5e. "
-        "Я помогу тебе создать и управлять своим персонажем.\n\n"
-        "Используй /help чтобы узнать, что я умею!"
-    ),
-    "help": (
-        "Доступные команды:\n"
-        "/start - Начать работу с ботом\n"
-        "/help - Показать это сообщение\n"
-        "/create_character - Создать нового персонажа\n"
-        "/list_characters - Показать список персонажей\n"
-        "/view_character - Просмотреть информацию о персонаже\n"
-        "/delete_character - Удалить персонажа\n"
-        "/edit_character - Изменить базовые параметры персонажа\n\n"
-        "Управление навыками и спасбросками:\n"
-        "/set_proficiencies - Установить владение навыками\n"
-        "/set_expertise - Установить экспертизу навыков\n"
-        "/set_saving_throws - Установить владение спасбросками\n\n"
-        "Управление базовыми параметрами:\n"
-        "/set_hit_points - Установить количество очков здоровья\n"
-        "/set_armor_class - Установить класс брони\n"
-        "/set_speed - Установить скорость передвижения\n"
-        "/set_proficiency_bonus - Установить бонус мастерства"
-    ),
+    "start": "Добро пожаловать в бота для управления персонажами D&D!",
+    "help": """Доступные команды:
+
+Основные команды:
+/start - Начать работу с ботом
+/help - Показать это сообщение
+/create_character - Создать нового персонажа
+/list_characters - Показать список персонажей
+/view_character - Просмотреть информацию о персонаже
+/delete_character - Удалить персонажа
+/edit_character - Редактировать базовые параметры персонажа
+
+Управление навыками и спасбросками:
+/set_proficiencies - Установить мастерство навыков
+/set_expertise - Установить экспертизу навыков
+/set_saving_throws - Установить владение спасбросками
+
+Управление базовыми параметрами:
+/set_hit_points - Установить здоровье
+/set_armor_class - Установить класс брони
+/set_speed - Установить скорость
+/set_proficiency_bonus - Установить бонус мастерства
+
+Управление заклинаниями:
+/set_spell_slots - Установить ячейки заклинаний
+/add_spell - Добавить заклинание или заговор
+/remove_spell - Удалить заклинание или заговор""",
     "character_creation": {
         "start": "Давайте создадим нового персонажа! Как его зовут?",
         "name_invalid": "Имя персонажа должно содержать от 2 до 30 символов. Попробуйте еще раз:",
