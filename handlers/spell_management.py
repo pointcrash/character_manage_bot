@@ -343,11 +343,83 @@ async def process_remove_spell_name(message: types.Message, state: FSMContext):
     
     await state.clear()
 
+# Обработчик команды /view_spells
+async def cmd_view_spells(message: types.Message, state: FSMContext):
+    characters = character_storage.get_user_characters(message.from_user.id)
+    
+    if not characters:
+        await message.answer(MESSAGES["character_management"]["no_characters"])
+        return
+    
+    # Создаем клавиатуру с персонажами
+    keyboard = ReplyKeyboardMarkup(
+        keyboard=[[KeyboardButton(text=char["name"])] for char in characters],
+        resize_keyboard=True,
+        one_time_keyboard=True
+    )
+    
+    await message.answer(
+        "Выберите персонажа для просмотра заклинаний:",
+        reply_markup=keyboard
+    )
+    await state.set_state(CharacterManagement.waiting_for_view_spells_character)
+
+# Обработчик выбора персонажа для просмотра заклинаний
+async def process_view_spells_character(message: types.Message, state: FSMContext):
+    character_name = message.text.strip()
+    character = character_storage.load_character(message.from_user.id, character_name)
+    
+    if not character:
+        await message.answer(
+            MESSAGES["common"]["invalid_input"],
+            reply_markup=ReplyKeyboardRemove()
+        )
+        await state.clear()
+        return
+    
+    # Формируем сообщение с магической информацией
+    magic_info = f"🔮 Магические способности персонажа {character['name']}:\n\n"
+    
+    # Ячейки заклинаний
+    spell_slots = character['magic']['spell_slots']['values']
+    if any(spell_slots.values()):
+        magic_info += f"📚 Ячейки заклинаний:\n"
+        for level, slots in spell_slots.items():
+            if slots > 0:
+                magic_info += f"  • {level} уровень: {slots}\n"
+    
+    # Известные заклинания
+    if character['magic']['spells_known']['cantrips'] or character['magic']['spells_known']['spells']:
+        magic_info += f"\n📖 Известные заклинания:\n"
+        if character['magic']['spells_known']['cantrips']:
+            magic_info += f"  Заговоры:\n"
+            for spell in character['magic']['spells_known']['cantrips']:
+                magic_info += f"    • {spell}\n"
+        if character['magic']['spells_known']['spells']:
+            magic_info += f"  Заклинания:\n"
+            for spell in character['magic']['spells_known']['spells']:
+                magic_info += f"    • {spell}\n"
+    
+    # Параметры заклинаний
+    if character['magic']['spell_save_dc']['value'] or character['magic']['spell_attack_bonus']['value']:
+        magic_info += f"\n🎯 Параметры заклинаний:\n"
+        if character['magic']['spell_save_dc']['value']:
+            magic_info += f"  • Сложность спасброска: {character['magic']['spell_save_dc']['value']}\n"
+        if character['magic']['spell_attack_bonus']['value']:
+            magic_info += f"  • Бонус к атаке: +{character['magic']['spell_attack_bonus']['value']}\n"
+    
+    await message.answer(
+        magic_info,
+        reply_markup=ReplyKeyboardRemove()
+    )
+    await state.clear()
+
 def register_spell_management_handlers(dp):
     """Регистрация всех обработчиков управления заклинаниями"""
     dp.message.register(cmd_set_spell_slots, Command("set_spell_slots"))
     dp.message.register(cmd_add_spell, Command("add_spell"))
     dp.message.register(cmd_remove_spell, Command("remove_spell"))
+    dp.message.register(cmd_view_spells, Command("view_spells"))
     
     dp.message.register(process_spell_slots_character, CharacterManagement.waiting_for_spell_slots_character)
     dp.message.register(process_spell_slots_values, CharacterManagement.waiting_for_spell_slots_values)
@@ -357,4 +429,5 @@ def register_spell_management_handlers(dp):
     dp.message.register(process_spell_name, CharacterManagement.waiting_for_spell_name)
     dp.message.register(process_remove_spell_character, CharacterManagement.waiting_for_remove_spell_character)
     dp.message.register(process_remove_spell_type, CharacterManagement.waiting_for_remove_spell_type)
-    dp.message.register(process_remove_spell_name, CharacterManagement.waiting_for_remove_spell_name) 
+    dp.message.register(process_remove_spell_name, CharacterManagement.waiting_for_remove_spell_name)
+    dp.message.register(process_view_spells_character, CharacterManagement.waiting_for_view_spells_character) 

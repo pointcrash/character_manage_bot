@@ -197,38 +197,6 @@ async def process_character_select(message: types.Message, state: FSMContext):
         if money['silver']: character_info += f"  • {money['silver']} серебряных\n"
         if money['copper']: character_info += f"  • {money['copper']} медных\n"
     
-    # Добавляем информацию о магических способностях
-    if any(character['magic']['spell_slots']['values'].values()):
-        character_info += f"\nМагические способности:\n"
-        
-        # Ячейки заклинаний
-        spell_slots = character['magic']['spell_slots']['values']
-        if any(spell_slots.values()):
-            character_info += f"Ячейки заклинаний:\n"
-            for level, slots in spell_slots.items():
-                if slots > 0:
-                    character_info += f"  • {level} уровень: {slots}\n"
-        
-        # Известные заклинания
-        if character['magic']['spells_known']['cantrips'] or character['magic']['spells_known']['spells']:
-            character_info += f"Известные заклинания:\n"
-            if character['magic']['spells_known']['cantrips']:
-                character_info += f"  Заговоры:\n"
-                for spell in character['magic']['spells_known']['cantrips']:
-                    character_info += f"    • {spell}\n"
-            if character['magic']['spells_known']['spells']:
-                character_info += f"  Заклинания:\n"
-                for spell in character['magic']['spells_known']['spells']:
-                    character_info += f"    • {spell}\n"
-        
-        # Параметры заклинаний
-        if character['magic']['spell_save_dc']['value'] or character['magic']['spell_attack_bonus']['value']:
-            character_info += f"Параметры заклинаний:\n"
-            if character['magic']['spell_save_dc']['value']:
-                character_info += f"  • Сложность спасброска: {character['magic']['spell_save_dc']['value']}\n"
-            if character['magic']['spell_attack_bonus']['value']:
-                character_info += f"  • Бонус к атаке: +{character['magic']['spell_attack_bonus']['value']}\n"
-    
     # Добавляем информацию о сопротивлениях и иммунитетах
     if character['advanced_stats']['resistances']['values'] or character['advanced_stats']['immunities']['values']:
         character_info += f"\nОсобые способности:\n"

@@ -50,6 +50,7 @@ class CharacterManagement(StatesGroup):
     waiting_for_remove_spell_character = State()
     waiting_for_remove_spell_type = State()
     waiting_for_remove_spell_name = State()
+    waiting_for_view_spells_character = State()
 
 # Доступные расы и классы
 RACES = [
@@ -89,9 +90,11 @@ MESSAGES = {
 /set_proficiency_bonus - Установить бонус мастерства
 
 Управление заклинаниями:
+/view_spells - Просмотреть магические способности персонажа
 /set_spell_slots - Установить ячейки заклинаний
 /add_spell - Добавить заклинание или заговор
 /remove_spell - Удалить заклинание или заговор""",
+
     "character_creation": {
         "start": "Давайте создадим нового персонажа! Как его зовут?",
         "name_invalid": "Имя персонажа должно содержать от 2 до 30 символов. Попробуйте еще раз:",
