@@ -1,3 +1,4 @@
+import re
 from aiogram import types, F
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
@@ -209,15 +210,24 @@ async def process_spell_name(message: types.Message, state: FSMContext):
     else:
         # Добавляем заклинание
         spell_level = data["spell_level"]
-        if spell_name not in character['magic']['spells_known']['spells']:
-            character['magic']['spells_known']['spells'].append(spell_name)
+        spell_name_with_level = f"{spell_name} ({spell_level} уровень)"
+        if spell_name_with_level not in character['magic']['spells_known']['spells']:
+            character['magic']['spells_known']['spells'].append(spell_name_with_level)
+
+            def extract_level(spell):
+                match = re.search(r"\((\d+) уровень\)", spell)
+                return int(match.group(1)) if match else 0
+
+            # Сортируем список по уровню
+            character['magic']['spells_known']['spells'] = sorted(
+                character['magic']['spells_known']['spells'], key=extract_level)
     
     # Сохраняем изменения
     if character_storage.save_character(message.from_user.id, character):
         if spell_type == "Заговор":
             await message.answer(f"Заговор '{spell_name}' успешно добавлен.")
         else:
-            await message.answer(f"Заклинание '{spell_name}' {spell_level} уровня успешно добавлено.")
+            await message.answer(f"Заклинание '{spell_name_with_level}' успешно добавлено.")
     else:
         await message.answer("Произошла ошибка при сохранении изменений.")
     
