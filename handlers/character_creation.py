@@ -41,6 +41,23 @@ def calculate_skill_values(abilities: dict, proficiency_bonus: int, proficiencie
     
     return skill_values
 
+def calculate_saving_throw_value(character: dict, ability: str) -> int:
+    """Рассчитать значение спасброска с учетом модификатора характеристики и бонуса мастерства"""
+    # Получаем модификатор характеристики
+    ability_modifier = character['abilities'][ability]['modifier']
+    
+    # Получаем бонус мастерства
+    proficiency_bonus = character['base_stats']['proficiency_bonus']['value']
+    
+    # Базовое значение - модификатор характеристики
+    value = ability_modifier
+    
+    # Добавляем бонус мастерства если спасбросок в списке мастерства
+    if character['abilities'][ability]['saving_throw_proficient']:
+        value += proficiency_bonus
+    
+    return value
+
 # Обработчик команды /create_character
 async def cmd_create_character(message: types.Message, state: FSMContext):
     await message.answer(MESSAGES["character_creation"]["start"])
@@ -330,6 +347,10 @@ async def process_abilities(message: types.Message, state: FSMContext):
     
     # Обновляем значения навыков в структуре персонажа
     character['advanced_stats']['skills']['values'] = skill_values
+    
+    # Рассчитываем значения спасбросков
+    for ability in character['abilities']:
+        character['advanced_stats']['saving_throws']['values'][ability] = calculate_saving_throw_value(character, ability)
     
     # Сохраняем персонажа
     if character_storage.save_character(message.from_user.id, character):

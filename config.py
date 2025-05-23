@@ -25,6 +25,8 @@ class CharacterManagement(StatesGroup):
     waiting_for_proficiencies_list = State()
     waiting_for_expertise_character = State()
     waiting_for_expertise_list = State()
+    waiting_for_saving_throws_character = State()
+    waiting_for_saving_throws_list = State()
 
 # Доступные расы и классы
 RACES = [
