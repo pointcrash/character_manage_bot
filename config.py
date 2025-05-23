@@ -65,6 +65,8 @@ class CharacterManagement(StatesGroup):
     waiting_for_description_character = State()
     waiting_for_description_text = State()
     waiting_for_view_description_character = State()
+    # Состояния для управления снаряжением
+    waiting_for_view_equipment_character = State()
 
 # Доступные расы и классы
 RACES = [
@@ -90,6 +92,7 @@ MESSAGES = {
 /list_characters - Показать список персонажей
 /view_character - Просмотреть информацию о персонаже
 /view_spells - Просмотреть магические способности персонажа
+/view_equipment - Просмотреть снаряжение персонажа
 /delete_character - Удалить персонажа
 /edit_character - Редактировать базовые параметры персонажа
 

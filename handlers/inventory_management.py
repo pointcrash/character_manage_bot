@@ -260,12 +260,89 @@ async def process_inventory_item_remove(message: types.Message, state: FSMContex
     
     await state.clear()
 
+# Обработчик команды /view_equipment
+async def cmd_view_equipment(message: types.Message, state: FSMContext):
+    characters = character_storage.get_user_characters(message.from_user.id)
+    
+    if not characters:
+        await message.answer(MESSAGES["character_management"]["no_characters"])
+        return
+    
+    # Создаем клавиатуру с персонажами
+    keyboard = ReplyKeyboardMarkup(
+        keyboard=[[KeyboardButton(text=char["name"])] for char in characters],
+        resize_keyboard=True,
+        one_time_keyboard=True
+    )
+    
+    await message.answer(
+        "Выберите персонажа для просмотра снаряжения:",
+        reply_markup=keyboard
+    )
+    await state.set_state(CharacterManagement.waiting_for_view_equipment_character)
+
+# Обработчик выбора персонажа для просмотра снаряжения
+async def process_view_equipment_character(message: types.Message, state: FSMContext):
+    character_name = message.text.strip()
+    character = character_storage.load_character(message.from_user.id, character_name)
+    
+    if not character:
+        await message.answer(
+            MESSAGES["common"]["invalid_input"],
+            reply_markup=ReplyKeyboardRemove()
+        )
+        await state.clear()
+        return
+    
+    # Формируем сообщение с информацией о снаряжении
+    equipment_info = f"🎒 Снаряжение персонажа {character_name}:\n\n"
+    
+    # Оружие
+    equipment_info += "⚔️ Оружие:\n"
+    if character['equipment']['weapons']['items']:
+        for weapon in character['equipment']['weapons']['items']:
+            equipment_info += f"• {weapon}\n"
+    else:
+        equipment_info += "Нет оружия\n"
+    
+    # Броня
+    equipment_info += "\n🛡️ Броня:\n"
+    if character['equipment']['armor']['items']:
+        for armor in character['equipment']['armor']['items']:
+            equipment_info += f"• {armor}\n"
+    else:
+        equipment_info += "Нет брони\n"
+    
+    # Предметы
+    equipment_info += "\n📦 Предметы:\n"
+    if character['equipment']['items']['items']:
+        for item in character['equipment']['items']['items']:
+            equipment_info += f"• {item}\n"
+    else:
+        equipment_info += "Нет предметов\n"
+    
+    # Деньги
+    money = character['equipment']['money']
+    equipment_info += "\n💰 Деньги:\n"
+    if any([money['copper'], money['silver'], money['gold'], money['platinum']]):
+        if money['platinum']: equipment_info += f"• {money['platinum']} платиновых\n"
+        if money['gold']: equipment_info += f"• {money['gold']} золотых\n"
+        if money['silver']: equipment_info += f"• {money['silver']} серебряных\n"
+        if money['copper']: equipment_info += f"• {money['copper']} медных\n"
+    else:
+        equipment_info += "Нет денег\n"
+    
+    await message.answer(equipment_info, reply_markup=ReplyKeyboardRemove())
+    await state.clear()
+
 def register_inventory_management_handlers(dp):
     """Регистрация всех обработчиков управления инвентарем"""
     dp.message.register(cmd_inventory, Command("inventory"))
+    dp.message.register(cmd_view_equipment, Command("view_equipment"))
     
     dp.message.register(process_inventory_character, CharacterManagement.waiting_for_inventory_character)
     dp.message.register(process_inventory_operation, CharacterManagement.waiting_for_inventory_operation)
     dp.message.register(process_inventory_category, CharacterManagement.waiting_for_inventory_category)
     dp.message.register(process_inventory_item_name, CharacterManagement.waiting_for_inventory_item_name)
-    dp.message.register(process_inventory_item_remove, CharacterManagement.waiting_for_inventory_item_remove) 
+    dp.message.register(process_inventory_item_remove, CharacterManagement.waiting_for_inventory_item_remove)
+    dp.message.register(process_view_equipment_character, CharacterManagement.waiting_for_view_equipment_character) 

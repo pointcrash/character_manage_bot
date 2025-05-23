@@ -167,36 +167,6 @@ async def process_character_select(message: types.Message, state: FSMContext):
         else:
             character_info += f"  {skill}: {value:+d}\n"
     
-    # Добавляем информацию о снаряжении
-    character_info += f"\nСнаряжение:\n"
-    
-    # Оружие
-    if character['equipment']['weapons']['items']:
-        character_info += f"Оружие:\n"
-        for weapon in character['equipment']['weapons']['items']:
-            character_info += f"  • {weapon}\n"
-    
-    # Броня
-    if character['equipment']['armor']['items']:
-        character_info += f"Броня:\n"
-        for armor in character['equipment']['armor']['items']:
-            character_info += f"  • {armor}\n"
-    
-    # Предметы
-    if character['equipment']['items']['items']:
-        character_info += f"Предметы:\n"
-        for item in character['equipment']['items']['items']:
-            character_info += f"  • {item}\n"
-    
-    # Деньги
-    money = character['equipment']['money']
-    if any([money['copper'], money['silver'], money['gold'], money['platinum']]):
-        character_info += f"Деньги:\n"
-        if money['platinum']: character_info += f"  • {money['platinum']} платиновых\n"
-        if money['gold']: character_info += f"  • {money['gold']} золотых\n"
-        if money['silver']: character_info += f"  • {money['silver']} серебряных\n"
-        if money['copper']: character_info += f"  • {money['copper']} медных\n"
-    
     # Добавляем информацию о сопротивлениях и иммунитетах
     if character['advanced_stats']['resistances']['values'] or character['advanced_stats']['immunities']['values']:
         character_info += f"\nОсобые способности:\n"
@@ -208,6 +178,10 @@ async def process_character_select(message: types.Message, state: FSMContext):
             character_info += f"Иммунитеты:\n"
             for immunity in character['advanced_stats']['immunities']['values']:
                 character_info += f"  • {immunity}\n"
+    
+    # Добавляем описание персонажа, если оно есть
+    if character.get('description'):
+        character_info += f"\n📝 Описание:\n{character['description']}\n"
     
     await message.answer(
         character_info,
