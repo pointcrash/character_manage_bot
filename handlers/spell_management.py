@@ -300,6 +300,9 @@ async def process_remove_spell_type(message: types.Message, state: FSMContext):
         await state.clear()
         return
     
+    # Сохраняем тип заклинания в состоянии
+    await state.update_data(spell_type=spell_type)
+    
     # Создаем клавиатуру со списком заклинаний
     spells = character['magic']['spells_known']['cantrips'] if spell_type == "Заговор" else character['magic']['spells_known']['spells']
     
