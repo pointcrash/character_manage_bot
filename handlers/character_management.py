@@ -308,8 +308,15 @@ async def process_proficiencies_character(message: types.Message, state: FSMCont
     # Получаем список всех доступных навыков
     all_skills = get_all_skills(character)
     
+    # Получаем текущие выбранные навыки
+    current_proficiencies = character['advanced_stats']['skills']['proficiencies']
+    
     await message.answer(
-        f"Введите названия навыков через пробел для установки мастерства.\n"
+        f"Введите названия навыков через запятую для установки мастерства.\n"
+        f"Например: Уход за животными, Атлетика, Скрытность\n\n"
+        f"Текущие навыки с мастерством:\n"
+        f"{', '.join(current_proficiencies) if current_proficiencies else 'Нет'}\n\n"
+        f"Примечание: повторный ввод навыка снимет с него мастерство.\n\n"
         f"Доступные навыки: {', '.join(all_skills)}",
         reply_markup=ReplyKeyboardRemove()
     )
@@ -324,26 +331,40 @@ async def process_proficiencies_list(message: types.Message, state: FSMContext):
     # Получаем список всех доступных навыков
     all_skills = get_all_skills(character)
     
-    # Разбиваем введенный текст на навыки
-    input_skills = [skill.strip() for skill in message.text.split()]
+    # Разбиваем введенный текст на навыки по запятым, сохраняя пробелы внутри названий
+    input_skills = [skill.strip() for skill in message.text.split(',')]
     
-    # Проверяем валидность навыков
-    invalid_skills = [skill for skill in input_skills if skill not in all_skills]
+    # Создаем словарь для поиска навыков без учета регистра
+    skills_lower = {skill.lower(): skill for skill in all_skills}
+    
+    # Проверяем валидность навыков и приводим их к правильному регистру
+    normalized_skills = []
+    invalid_skills = []
+    
+    for skill in input_skills:
+        skill_lower = skill.lower()
+        if skill_lower in skills_lower:
+            normalized_skills.append(skills_lower[skill_lower])
+        else:
+            invalid_skills.append(skill)
+    
     if invalid_skills:
         await message.answer(
             f"Следующие навыки не найдены: {', '.join(invalid_skills)}\n"
-            f"Пожалуйста, используйте только доступные навыки: {', '.join(all_skills)}"
+            f"Пожалуйста, используйте только доступные навыки: {', '.join(all_skills)}\n\n"
+            f"Введите навыки через запятую, например:\n"
+            f"Уход за животными, Атлетика, Скрытность"
         )
         return
     
     # Удаляем навыки из списка если они там есть
     character['advanced_stats']['skills']['proficiencies'] = list(
-        set(character['advanced_stats']['skills']['proficiencies']) ^ set(input_skills))
+        set(character['advanced_stats']['skills']['proficiencies']) ^ set(normalized_skills))
     
     # Удаляем навыки из списка экспертизы, если они там есть
     character['advanced_stats']['skills']['expertise'] = [
         skill for skill in character['advanced_stats']['skills']['expertise']
-        if skill not in input_skills
+        if skill not in normalized_skills
     ]
     
     # Пересчитываем значения навыков
